@@ -24,9 +24,9 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
         
     - name: Setup dependencies
+      shell: powershell
       run: |
-        cd axmol
-        pwsh 1k/1kiss.ps1 -setupOnly
+        axmol\1k\1kiss.ps1 -setupOnly
         
     - name: Configure CMake
       run: |
@@ -91,7 +91,7 @@ jobs:
     - name: Setup dependencies
       run: |
         cd axmol
-        pwsh 1k/1kiss.ps1 -setupOnly
+        pwsh -NoProfile -ExecutionPolicy Bypass -File "./1k/1kiss.ps1" -setupOnly
           
     - name: Configure CMake
       run: |
@@ -133,7 +133,7 @@ jobs:
     - name: Setup dependencies
       run: |
         cd axmol
-        pwsh 1k/1kiss.ps1 -setupOnly
+        pwsh -NoProfile -ExecutionPolicy Bypass -File "./1k/1kiss.ps1" -setupOnly
       
     - name: Configure CMake
       run: |
@@ -175,7 +175,7 @@ jobs:
     - name: Setup dependencies
       run: |
         cd axmol
-        pwsh 1k/1kiss.ps1 -setupOnly
+        pwsh -NoProfile -ExecutionPolicy Bypass -File "./1k/1kiss.ps1" -setupOnly
       
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -237,7 +237,7 @@ jobs:
     - name: Setup dependencies
       run: |
         cd axmol
-        pwsh 1k/1kiss.ps1 -setupOnly
+        pwsh -NoProfile -ExecutionPolicy Bypass -File "./1k/1kiss.ps1" -setupOnly
         
     - name: Setup NDK
       run: |
