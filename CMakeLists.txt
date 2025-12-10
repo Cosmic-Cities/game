@@ -15,6 +15,11 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules
 )
 
+# Disable pthreads for WASM (required for platforms without COOP/COEP headers like Newgrounds)
+if(EMSCRIPTEN)
+  set(AX_WASM_THREADS "0" CACHE STRING "Disable pthreads for WASM" FORCE)
+endif()
+
 # NOTE: The order of the cmake module "include(AXGame...)" statements matters
 include(AXGameEngineOptions)
 include(AXGameEngineSetup)
@@ -57,7 +62,21 @@ include(AXGameTargetSetup)
 # mark app resources, resource will be copy auto after mark
 ax_setup_app_config(${APP_NAME})
 
-# Add any libraries you need to link to the project after this point
+# CPM dependency management
+include(CPM)
+
+CPMAddPackage("gh:aantron/better-enums#0.11.3")
+CPMAddPackage("gh:nlohmann/json#v3.12.0")
+CPMAddPackage("gh:catchorg/Catch2#v3.11.0")
+CPMAddPackage("gh:TsudaKageyu/minhook#v1.3.4")
+
+# Include directories for all CPM packages
+target_include_directories(${PROJECT_NAME} PRIVATE 
+  ${better_enums_SOURCE_DIR}
+  ${nlohmann_json_SOURCE_DIR}/include
+  ${Catch2_SOURCE_DIR}/include
+  ${minhook_SOURCE_DIR}/include
+)
 
 # Default Platform-specific setup
 include(AXGamePlatformSetup)
