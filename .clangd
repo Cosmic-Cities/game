@@ -1,0 +1,13 @@
+CompileFlags:
+  CompilationDatabase: build
+  Add: 
+    - -IE:/Projects/Axmol/CosmicCities/Source
+    - -IE:/Projects/Axmol/CosmicCities/axmol
+    - -IE:/Projects/Axmol/CosmicCities/axmol/core
+    - -IE:/Projects/Axmol/CosmicCities/axmol/core/base
+    - -IE:/Projects/Axmol/CosmicCities/axmol/core/platform
+    - -IE:/Projects/Axmol/CosmicCities/axmol/core/platform/win32
+    - -IE:/Projects/Axmol/CosmicCities/axmol/core/audio
+    - -IE:/Projects/Axmol/CosmicCities/axmol/3rdparty
+    - -std=c++20
+    - -fms-extensions

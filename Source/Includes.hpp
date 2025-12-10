@@ -1,0 +1,5 @@
+#include "axmol.h"
+#include "AppDelegate.h"
+#include "LoadingLayer.h"
+#include "utils/Starfield.h"
+#include "utils/InputManager.h"
