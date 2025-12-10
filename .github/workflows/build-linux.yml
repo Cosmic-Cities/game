@@ -37,25 +37,6 @@ jobs:
           libgtk-3-dev \
           libfontconfig1-dev
           
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-        
-    - name: Install PowerShell
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget apt-transport-https software-properties-common
-        wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
-        sudo dpkg -i packages-microsoft-prod.deb
-        sudo apt-get update
-        sudo apt-get install -y powershell
-        
-    - name: Setup Axmol dependencies
-      run: |
-        cd axmol
-        pwsh 1k/fetch.ps1
-        
     - name: Configure CMake
       run: |
         cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release

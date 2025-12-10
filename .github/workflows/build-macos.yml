@@ -20,20 +20,6 @@ jobs:
     - name: Setup CMake
       uses: lukka/get-cmake@latest
       
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-        
-    - name: Install PowerShell
-      run: |
-        brew install --cask powershell
-        
-    - name: Setup Axmol dependencies
-      run: |
-        cd axmol
-        pwsh 1k/fetch.ps1
-        
     - name: Configure CMake
       run: |
         cmake -B build -G Xcode
