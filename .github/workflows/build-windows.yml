@@ -36,7 +36,7 @@ jobs:
     - name: Setup Axmol dependencies
       run: |
         cd axmol
-        python 1k/fetch.py
+        pwsh 1k/fetch.ps1
         
     - name: Configure CMake
       run: |

@@ -42,15 +42,19 @@ jobs:
       with:
         python-version: '3.x'
         
-    - name: Install Python dependencies
+    - name: Install PowerShell
       run: |
-        python -m pip install --upgrade pip
-        pip install requests
+        sudo apt-get update
+        sudo apt-get install -y wget apt-transport-https software-properties-common
+        wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+        sudo dpkg -i packages-microsoft-prod.deb
+        sudo apt-get update
+        sudo apt-get install -y powershell
         
     - name: Setup Axmol dependencies
       run: |
         cd axmol
-        python 1k/fetch.py
+        pwsh 1k/fetch.ps1
         
     - name: Configure CMake
       run: |
