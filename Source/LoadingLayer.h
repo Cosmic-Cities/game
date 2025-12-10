@@ -3,6 +3,10 @@
 #include "axmol.h"
 
 namespace cosmiccities {
+    enum class LoadingStep {
+        
+    };
+
     class LoadingLayer : public ax::Layer {
     public:
         bool init();
