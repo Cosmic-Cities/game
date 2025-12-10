@@ -1,0 +1,59 @@
+name: Build Android
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+        
+    - name: Setup Axmol dependencies
+      run: |
+        cd axmol
+        python 1k/fetch.py
+        
+    - name: Setup NDK
+      run: |
+        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653"
+        
+    - name: Build APK
+      run: |
+        cd proj.android
+        chmod +x gradlew
+        ./gradlew assembleRelease
+        
+    - name: Upload Android APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: CosmicCities-Android-APK
+        path: proj.android/app/build/outputs/apk/release/*.apk
+        retention-days: 30

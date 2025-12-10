@@ -1,0 +1,66 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+      
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+        
+    - name: Setup Axmol dependencies
+      run: |
+        cd axmol
+        python 1k/fetch.py
+        
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        
+    - name: Build iOS
+      run: |
+        cd proj.ios_mac
+        xcodebuild -project ios/CosmicCities.xcodeproj \
+          -scheme CosmicCities \
+          -sdk iphoneos \
+          -configuration Release \
+          -derivedDataPath build \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO
+        
+    - name: Package IPA
+      run: |
+        mkdir -p artifacts
+        cd proj.ios_mac/build/Build/Products/Release-iphoneos
+        mkdir Payload
+        cp -r CosmicCities.app Payload/
+        zip -r ../../../../../artifacts/CosmicCities.ipa Payload
+        
+    - name: Upload iOS build
+      uses: actions/upload-artifact@v4
+      with:
+        name: CosmicCities-iOS
+        path: artifacts/CosmicCities.ipa
+        retention-days: 30

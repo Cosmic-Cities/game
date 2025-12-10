@@ -1,0 +1,57 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+      
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+        
+    - name: Setup Axmol dependencies
+      run: |
+        cd axmol
+        python 1k/fetch.py
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Xcode
+        
+    - name: Build
+      run: |
+        cmake --build build --config Release
+        
+    - name: Package artifacts
+      run: |
+        mkdir -p artifacts
+        cp -r build/bin/CosmicCities/Release/* artifacts/
+        cp -r Content artifacts/
+        
+    - name: Upload macOS build
+      uses: actions/upload-artifact@v4
+      with:
+        name: CosmicCities-macOS
+        path: artifacts/
+        retention-days: 30
