@@ -16,6 +16,8 @@ private:
     InputManager() = default;
     std::unordered_set<ax::EventKeyboard::KeyCode> keys;
 
+    size_t modSelectionIndex = 0;
+
     bool hasWindowedState = false;
     int prevX = 0;
     int prevY = 0;

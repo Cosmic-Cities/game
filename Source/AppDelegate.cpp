@@ -31,6 +31,8 @@
 #    include "audio/AudioEngine.h"
 #endif
 
+#include "utils/ModToggleManager.h"
+
 using namespace ax;
 
 static ax::Size designResolutionSize = ax::Size(480, 360);
@@ -68,6 +70,9 @@ bool AppDelegate::applicationDidFinishLaunching() {
                                     ResolutionPolicy::SHOW_ALL);
 
     InputManager::get().initialize();
+
+    // Discover mods and write a handshake for MinHook-driven loaders
+    cosmiccities::ModToggleManager::get().initialize("mods");
     
     auto scene = cosmiccities::LoadingLayer::scene();
 
