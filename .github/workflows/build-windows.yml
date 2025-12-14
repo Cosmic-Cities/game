@@ -25,14 +25,6 @@ jobs:
       run: |
         choco install ninja -y
         choco install llvm -y
-        choco install python -y
-
-    - name: Setup Axmol Engine
-      run: |
-        cd axmol/1k
-        powershell -ExecutionPolicy Bypass -File fetch.ps1 -uri https://raw.githubusercontent.com/axmolengine/axmol/dev/tools/devtools/vs.py -outPath vs.py
-        cd ..
-        powershell -ExecutionPolicy Bypass -File 1k/fetch.ps1 -uri https://github.com/axmolengine/axmol-3rdparty -outPath 3rdparty
 
     - name: Create Build Directory
       run: mkdir -p build
