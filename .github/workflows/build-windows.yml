@@ -30,7 +30,7 @@ jobs:
       shell: powershell
       run: |
         cd axmol/1k
-        . .\fetch.ps1
+        . .\manifest.ps1
         cd ../..
 
     - name: Create Build Directory
