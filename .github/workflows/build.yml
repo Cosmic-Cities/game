@@ -26,8 +26,9 @@ jobs:
       shell: pwsh
       run: |
         git clone --depth=1 https://github.com/axmolengine/axmol "$HOME/axmol"
-        $script = Join-Path $HOME 'axmol/build.ps1'
-        & $script -d (Join-Path $HOME 'axmol') -xb '--config','Release','--target','sources-migrate'
+        $scriptPath = "$HOME/axmol/build.ps1"
+        if (!(Test-Path $scriptPath)) { throw "Axmol build script not found: $scriptPath" }
+        powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath -d "$HOME/axmol" -xb '--config','Release','--target','sources-migrate'
     - name: Migrate sources
       run: |
         git checkout main
