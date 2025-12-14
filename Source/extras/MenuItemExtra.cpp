@@ -121,7 +121,8 @@ void MenuItemExtra::unselected() {
 }
 
 void MenuItemExtra::activate() {
-    if (!_soundPaths.empty()) {
+    if (!_soundPaths.empty() && !_soundPlayed) {
+        _soundPlayed = true;
         int randomIndex = ax::RandomHelper::random_int(0, static_cast<int>(_soundPaths.size() - 1));
         AudioEngine::play2d(_soundPaths[randomIndex]);
     }

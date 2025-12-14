@@ -9,7 +9,7 @@
 #define SOL_USE_BOOST 0
 #endif
 #include <sol/sol.hpp>
-#include <cstdio>
+#include <spdlog/spdlog.h>
 
 namespace cosmiccities {
 
@@ -25,7 +25,7 @@ bool DialogManager::startDialogue(const std::filesystem::path& luaFile) {
     }
 
     if (!loadFromLua(luaFile)) {
-        std::printf("DialogManager: Failed to load '%s'\n", luaFile.string().c_str());
+        spdlog::error("DialogManager: Failed to load '{}'", luaFile.string());
         return false;
     }
 
@@ -99,19 +99,19 @@ bool DialogManager::loadFromLua(const std::filesystem::path& luaFile) {
     sol::load_result lr = _lua->load_file(luaFile.string());
     if (!lr.valid()) {
         sol::error err = lr;
-        std::printf("DialogManager: load error: %s\n", err.what());
+        spdlog::error("DialogManager: load error: {}", err.what());
         return false;
     }
     sol::protected_function_result pr = lr();
     if (!pr.valid()) {
         sol::error err = pr;
-        std::printf("DialogManager: exec error: %s\n", err.what());
+        spdlog::error("DialogManager: exec error: {}", err.what());
         return false;
     }
 
     sol::object ret = pr;
     if (!ret.is<sol::table>()) {
-        std::printf("DialogManager: script did not return a table\n");
+        spdlog::error("DialogManager: script did not return a table");
         return false;
     }
 
@@ -168,7 +168,7 @@ bool DialogManager::loadFromLua(const std::filesystem::path& luaFile) {
     for (const auto& n : _nodes) {
         for (const auto& c : n.choices) {
             if (c.nextId != 0 && _idToIndex.find(c.nextId) == _idToIndex.end()) {
-                std::printf("DialogManager: warning: next id %d not found\n", c.nextId);
+                spdlog::warn("DialogManager: warning: next id {} not found", c.nextId);
             }
         }
     }

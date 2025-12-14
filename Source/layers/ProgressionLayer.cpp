@@ -16,6 +16,7 @@ bool ProgressionLayer::init(bool progressing) {
 
     auto title = Label::createWithBMFont(lm.getFontPath(), "");
     title->setString(fmt::format("{} - {}", lm.get(fmt::format("story.chapter.c{}.number", m_chapter)), lm.get(fmt::format("story.chapter.c{}.name", m_chapter))));
+    title->setColor({ 255, 255, 0 });
     title->setPosition({ winSize.width * 0.5f, winSize.height * 0.85f });
     addChild(title);
 

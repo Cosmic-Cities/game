@@ -232,3 +232,6 @@ tests/*-tests/build_*
 
 .gitee
 release_note_draft.txt
+
+Source/cdiscord.h
+Source/discordpp.h

@@ -128,6 +128,16 @@ void LoadingLayer::tickLoad(float dt) {
 bool LoadingLayer::advanceLoadStep() {
     switch (_loadStep) {
     case 0: {
+        if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.init-discord-rpc", "Initialising Discord RPC..."));
+        
+        // Initialize Discord Rich Presence
+        DiscordManager::instance().initialize("1392251941349757110");
+        DiscordManager::instance().setPresence("In Menu", "Starting game");
+        
+        _loadStep++;
+        return true;
+    }
+    case 1: {
         if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.assets.scan", "Scanning assets..."));
 
         listFilesByExt("sprites", {"png","jpg","jpeg"}, _texturesToLoad);
@@ -137,7 +147,7 @@ bool LoadingLayer::advanceLoadStep() {
         _loadStep++;
         return true;
     }
-    case 1: {
+    case 2: {
         if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.assets.index", "Indexing and preparing..."));
         auto dedup = [](std::vector<std::string>& v) {
             std::sort(v.begin(), v.end());
@@ -151,7 +161,7 @@ bool LoadingLayer::advanceLoadStep() {
         _loadStep++;
         return true;
     }
-    case 2: {
+    case 3: {
         if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.assets.textures", "Loading textures..."));
         auto* cache = Director::getInstance()->getTextureCache();
         for (const auto& path : _texturesToLoad) {
@@ -163,7 +173,7 @@ bool LoadingLayer::advanceLoadStep() {
         _loadStep++;
         return true;
     }
-    case 3: {
+    case 4: {
         if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.assets.audio", "Preloading audio..."));
         for (const auto& path : _soundsToLoad) {
             ax::AudioEngine::preload(path, [this](bool){
@@ -174,7 +184,7 @@ bool LoadingLayer::advanceLoadStep() {
         _loadStep++;
         return true;
     }
-    case 4: {
+    case 5: {
         if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.assets.fonts", "Priming fonts..."));
         for (const auto& f : _fontsToLoad) {
             auto lbl = Label::createWithBMFont(f, " ");
@@ -184,12 +194,12 @@ bool LoadingLayer::advanceLoadStep() {
         _loadStep++;
         return true;
     }
-    case 5: {
+    case 6: {
         if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.systems-warmup", "Warming up systems..."));
         _loadStep++;
         return true;
     }
-    case 6: {
+    case 7: {
         if (_stepText) _stepText->setString(LocalisationManager::instance().get("ui.loading.finalize", "Finalising..."));
         if (_loadedCount < _totalCount) {
             return true;

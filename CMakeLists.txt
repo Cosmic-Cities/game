@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+add_compile_definitions(FMT_HEADER_ONLY=1)
+
 if(XCODE)
   set(CMAKE_XCODE_GENERATE_TOP_LEVEL_PROJECT_ONLY TRUE)
 endif()
@@ -19,16 +21,13 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules
 )
 
-# Disable pthreads for WASM (required for platforms without COOP/COEP headers like Newgrounds)
 if(EMSCRIPTEN)
   set(AX_WASM_THREADS "0" CACHE STRING "Disable pthreads for WASM" FORCE)
 endif()
 
-# NOTE: The order of the cmake module "include(AXGame...)" statements matters
 include(AXGameEngineOptions)
 include(AXGameEngineSetup)
 
-# The common cross-platforms source files and header files
 file(GLOB_RECURSE GAME_HEADER
   CONFIGURE_DEPENDS
   Source/*.h Source/*.hpp
@@ -39,7 +38,6 @@ file(GLOB_RECURSE GAME_SOURCE
   Source/*.cpp Source/*.c
 )
 
-# Exclude optional modding files from the build (no in-game mod API)
 list(FILTER GAME_SOURCE EXCLUDE REGEX ".*/Source/utils/(HookManager|ModAPI|ModLoader)\\.cpp")
 list(FILTER GAME_HEADER EXCLUDE REGEX ".*/Source/utils/(HookManager|ModAPI|ModLoader)\\.h")
 
@@ -59,7 +57,6 @@ endif()
 
 include(AXGameSourceSetup)
 
-# mark app complie info and libs info
 set(APP_SOURCES
   ${GAME_HEADER}
   ${GAME_SOURCE}
@@ -67,10 +64,8 @@ set(APP_SOURCES
 
 include(AXGameTargetSetup)
 
-# mark app resources, resource will be copy auto after mark
 ax_setup_app_config(${APP_NAME})
 
-# CPM dependency management
 include(CPM)
 
 CPMAddPackage("gh:aantron/better-enums#0.11.3")
@@ -95,16 +90,45 @@ CPMAddPackage("gh:g-truc/glm#1.0.2")
 CPMAddPackage("gh:OmgRod/sol2#develop")
 CPMAddPackage("gh:icculus/physfs#main")
 CPMAddPackage("gh:lz4/lz4#v1.10.0")
-CPMAddPackage(
-  NAME discord-rpc
-  GITHUB_REPOSITORY discord/discord-rpc
-  GIT_TAG v3.4.0
-  OPTIONS 
-    "BUILD_EXAMPLES OFF"
-    "BUILD_SHARED_LIBS OFF"
-)
 
-# Include directories for all CPM packages
+option(ENABLE_DISCORD "Enable Discord Rich Presence integration" OFF)
+
+if(NOT ENABLE_DISCORD)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/lib/discord_social_sdk")
+    set(ENABLE_DISCORD ON)
+    message(STATUS "Discord SDK detected at lib/discord_social_sdk; enabling Discord support.")
+  endif()
+endif()
+
+if(ENABLE_DISCORD)
+  if(NOT DEFINED DISCORD_SDK_ROOT)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/lib/discord_social_sdk")
+      set(DISCORD_SDK_ROOT "${CMAKE_SOURCE_DIR}/lib/discord_social_sdk")
+    endif()
+  endif()
+  if(DEFINED DISCORD_SDK_ROOT)
+    set(DISCORD_SDK_LIB_DIR "${DISCORD_SDK_ROOT}/lib/release")
+    set(DISCORD_SDK_BIN_DIR "${DISCORD_SDK_ROOT}/bin/release")
+    set(DISCORD_SDK_INCLUDE_DIR "${DISCORD_SDK_ROOT}/include")
+    
+    if(WIN32)
+      set(DISCORD_LIB_PATH "${DISCORD_SDK_LIB_DIR}/discord_partner_sdk.lib")
+      set(DISCORD_SHARED_LIB "${DISCORD_SDK_BIN_DIR}/discord_partner_sdk.dll")
+    elseif(APPLE)
+      set(DISCORD_LIB_PATH "${DISCORD_SDK_LIB_DIR}/libdiscord_partner_sdk.dylib")
+      set(DISCORD_SHARED_LIB "${DISCORD_SDK_LIB_DIR}/libdiscord_partner_sdk.dylib")
+    else()
+      set(DISCORD_LIB_PATH "${DISCORD_SDK_LIB_DIR}/libdiscord_partner_sdk.so")
+      set(DISCORD_SHARED_LIB "${DISCORD_SDK_LIB_DIR}/libdiscord_partner_sdk.so")
+    endif()
+    
+    message(STATUS "Discord SDK found at: ${DISCORD_SDK_ROOT}")
+  else()
+    message(WARNING "ENABLE_DISCORD is ON but DISCORD_SDK_ROOT not defined and lib/discord_social_sdk not found. Discord support disabled.")
+    set(ENABLE_DISCORD OFF)
+  endif()
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE 
   ${better_enums_SOURCE_DIR}
   ${nlohmann_json_SOURCE_DIR}/include
@@ -117,12 +141,20 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${sol2_SOURCE_DIR}/include
   ${physfs_SOURCE_DIR}/src
   ${lz4_SOURCE_DIR}/lib
-  ${discord-rpc_SOURCE_DIR}/include
 )
 
-target_link_libraries(${PROJECT_NAME} minhook discord-rpc)
+if(ENABLE_DISCORD)
+  target_include_directories(${PROJECT_NAME} PRIVATE ${DISCORD_SDK_INCLUDE_DIR})
+  target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_DISCORD)
+endif()
 
-# Provide Lua headers/library for sol2 usage
+target_link_libraries(${PROJECT_NAME} minhook)
+
+if(ENABLE_DISCORD)
+  target_link_libraries(${PROJECT_NAME} ${DISCORD_LIB_PATH})
+  message(STATUS "Linking Discord SDK lib: ${DISCORD_LIB_PATH}")
+endif()
+
 if(TARGET plainlua)
   target_link_libraries(${PROJECT_NAME} plainlua)
 else()
@@ -130,17 +162,22 @@ else()
     ${CMAKE_CURRENT_SOURCE_DIR}/axmol/3rdparty/lua/plainlua)
 endif()
 
-# Copy minhook DLL next to the game binary on Windows
 if(WIN32)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "$<TARGET_FILE:minhook>"
       "$<TARGET_FILE_DIR:${PROJECT_NAME}>/"
   )
+  
+  if(ENABLE_DISCORD)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${DISCORD_SHARED_LIB}"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/"
+    )
+  endif()
 endif()
 
-# Default Platform-specific setup
 include(AXGamePlatformSetup)
 
-# Make sure the AXGameFinalSetup is included at the end of this file
 include(AXGameFinalSetup)

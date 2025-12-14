@@ -12,6 +12,7 @@ bool MenuLayer::init() {
     if (!Layer::init()) return false;
 
     auto winSize = Director::getInstance()->getWinSize();
+    auto lm = LocalisationManager::instance();
 
     auto bg = Starfield::create(480, 360, 120, 0.4f);
     if (bg) addChild(bg);
@@ -33,7 +34,7 @@ bool MenuLayer::init() {
     menu->setPosition({ winSize.width * 0.5f, winSize.height * 0.5f });
     addChild(menu);
 
-    auto button = MenuItemExtra::create(LocalisationManager::instance().createLabel("ui.general.yes"), AX_CALLBACK_1(MenuLayer::test, this), {
+    auto button = MenuItemExtra::create(lm.createLabel("ui.general.yes"), AX_CALLBACK_1(MenuLayer::test, this), {
         "sounds/sfx.blip.1.wav",
         "sounds/sfx.blip.2.wav",
         "sounds/sfx.blip.3.wav",
@@ -43,6 +44,8 @@ bool MenuLayer::init() {
     button->setAnchorPoint({ 0.5f, 0.5f });
     button->setPosition({ 0, 0 });
     menu->addChild(button);
+
+    lm.createLabel("ui.copyright", "© OmgRod 2025 - All Rights Reserved");
 
     return true;
 }

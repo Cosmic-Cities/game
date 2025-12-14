@@ -6,9 +6,7 @@
 #include <unordered_map>
 
 #include <nlohmann/json.hpp>
-
-// Use standard I/O for lightweight logging
-#include <cstdio>
+#include <spdlog/spdlog.h>
 
 namespace cosmiccities {
 
@@ -30,8 +28,8 @@ void ModToggleManager::initialize(const std::filesystem::path& modsDir) {
     std::error_code ec;
     std::filesystem::create_directories(_modsDir, ec);
     if (ec) {
-        std::printf("ModToggleManager: Failed to ensure mods directory '%s' (%s)\n",
-                    _modsDir.string().c_str(), ec.message().c_str());
+        spdlog::error("ModToggleManager: Failed to ensure mods directory '{}' ({})",
+                    _modsDir.string(), ec.message());
     }
 
     scanMods();
@@ -39,7 +37,33 @@ void ModToggleManager::initialize(const std::filesystem::path& modsDir) {
     syncState();
     writeHandshake();
 
+    // Load enabled DLLs immediately
+    loadEnabled();
+
     _initialized = true;
+}
+
+void ModToggleManager::loadEnabled() {
+    _loadedModules.clear();
+
+    for (const auto& mod : _mods) {
+        if (!mod.enabled) continue;
+
+        std::error_code ec;
+        if (!std::filesystem::exists(mod.path, ec)) {
+            spdlog::warn("ModToggleManager: Enabled mod '{}' missing at '{}'", mod.id, mod.path.string());
+            continue;
+        }
+
+        std::wstring wpath = mod.path.wstring();
+        HMODULE h = ::LoadLibraryW(wpath.c_str());
+        if (!h) {
+            spdlog::error("ModToggleManager: Failed to load '{}' (error {})", mod.path.string(), GetLastError());
+            continue;
+        }
+        _loadedModules.push_back(h);
+        spdlog::info("ModToggleManager: Loaded mod '{}' from '{}'", mod.id, mod.path.string());
+    }
 }
 
 void ModToggleManager::scanMods() {
@@ -73,9 +97,9 @@ void ModToggleManager::scanMods() {
     });
 
     if (_mods.empty()) {
-        std::printf("ModToggleManager: No mods found in '%s'\n", _modsDir.string().c_str());
+        spdlog::warn("ModToggleManager: No mods found in '{}'", _modsDir.string());
     } else {
-        std::printf("ModToggleManager: Found %zu mod(s) in '%s'\n", _mods.size(), _modsDir.string().c_str());
+        spdlog::info("ModToggleManager: Found {} mod(s) in '{}'", _mods.size(), _modsDir.string());
     }
 }
 
@@ -87,7 +111,7 @@ void ModToggleManager::loadState() {
 
     std::ifstream in(statePath);
     if (!in.is_open()) {
-        std::printf("ModToggleManager: Could not open state file '%s'\n", statePath.string().c_str());
+        spdlog::warn("ModToggleManager: Could not open state file '{}'", statePath.string());
         return;
     }
 
@@ -95,8 +119,8 @@ void ModToggleManager::loadState() {
     try {
         in >> j;
     } catch (const std::exception& e) {
-        std::printf("ModToggleManager: Failed to parse state file '%s' (%s)\n",
-                    statePath.string().c_str(), e.what());
+        spdlog::error("ModToggleManager: Failed to parse state file '{}' ({})",
+                    statePath.string(), e.what());
         return;
     }
 
@@ -190,7 +214,7 @@ void ModToggleManager::saveState() const {
 
     std::ofstream out(statePath);
     if (!out.is_open()) {
-        std::printf("ModToggleManager: Failed to write state file '%s'\n", statePath.string().c_str());
+        spdlog::error("ModToggleManager: Failed to write state file '{}'", statePath.string());
         return;
     }
 
@@ -217,13 +241,13 @@ void ModToggleManager::writeHandshake() const {
 
     std::ofstream out(handshakePath);
     if (!out.is_open()) {
-        std::printf("ModToggleManager: Failed to write handshake file '%s'\n",
+        spdlog::error("ModToggleManager: Failed to write handshake file '{}'",
                     handshakePath.string().c_str());
         return;
     }
 
     out << j.dump(2);
-    std::printf("ModToggleManager: Wrote handshake to '%s' (%zu mod entries)\n",
+    spdlog::debug("ModToggleManager: Wrote handshake to '{}' ({} mod entries)",
                 handshakePath.string().c_str(), _mods.size());
 }
 

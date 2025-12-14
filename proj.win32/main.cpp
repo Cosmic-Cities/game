@@ -28,7 +28,7 @@
 #include "platform/Application.h"
 
 // Uncomment to enable win32 console
-// #define USE_WIN32_CONSOLE
+#define USE_WIN32_CONSOLE
 
 using namespace ax;
 

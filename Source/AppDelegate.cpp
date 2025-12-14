@@ -75,22 +75,6 @@ bool AppDelegate::applicationDidFinishLaunching() {
     // Discover mods and write a handshake for MinHook-driven loaders
     cosmiccities::ModToggleManager::get().initialize("mods");
     
-    // Initialize Discord Rich Presence
-    // TODO: Replace with actual Discord application ID from https://discord.com/developers/applications
-    DiscordManager::instance().initialize("1234567890123456789");
-    DiscordManager::instance().setPresence("In Menu", "Starting game");
-    
-    // Schedule Discord callbacks update
-    director->getScheduler()->schedule(
-        AX_SCHEDULE_SELECTOR(AppDelegate::updateDiscord),
-        this,
-        1.0f,  // Update every second
-        ax::macro::kRepeatForever,
-        0.0f,
-        false,
-        "discord_update"
-    );
-    
     auto scene = cosmiccities::LoadingLayer::scene();
 
     director->runWithScene(scene);

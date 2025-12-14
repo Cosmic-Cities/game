@@ -6,6 +6,7 @@
 
 #include <nlohmann/json.hpp>
 #include "axmol.h"
+#include <AL/al.h>
 
 #include "AppDelegate.h"
 

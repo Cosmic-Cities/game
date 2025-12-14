@@ -16,6 +16,7 @@ private:
     ax::Node* _content = nullptr;
     bool _hovered = false;
     bool _pressed = false;
+    bool _soundPlayed = false;
     std::vector<std::string> _soundPaths;
 
     bool init(ax::Node* content, const ax::ccMenuCallback& callback);

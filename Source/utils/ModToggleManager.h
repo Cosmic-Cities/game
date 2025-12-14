@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <windows.h>
 
 namespace cosmiccities {
 
@@ -35,6 +36,9 @@ public:
     void saveState() const;
     void writeHandshake() const;
 
+    // Load all enabled DLL mods from the mods directory
+    void loadEnabled();
+
     std::filesystem::path modsDirectory() const { return _modsDir; }
 
 private:
@@ -49,6 +53,7 @@ private:
     std::vector<ModToggleEntry> _mods;
     size_t _selectedIndex{0};
     bool _initialized{false};
+    std::vector<HMODULE> _loadedModules;
 };
 
 } // namespace cosmiccities

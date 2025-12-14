@@ -2,8 +2,10 @@
 #include "ModToggleManager.h"
 #include "../dialog/DialogManager.h"
 #include "../dialog/DialogLayer.h"
+#include "../devtools/DevTools.h"
 
-#include <cstdio>
+#include <spdlog/spdlog.h>
+#include <fmt/format.h>
 
 void InputManager::initialize() {
     auto listener = ax::EventListenerKeyboard::create();
@@ -17,6 +19,23 @@ void InputManager::initialize() {
 
     ax::Director::getInstance()->getEventDispatcher()
         ->addEventListenerWithFixedPriority(listener, 1);
+
+    // Register default combos
+    registerCombo({ ax::EventKeyboard::KeyCode::KEY_LEFT_ALT, ax::EventKeyboard::KeyCode::KEY_ENTER }, [this]() {
+        toggleFullscreen();
+    });
+
+    // Backspace combo: triggers on press, hold logic handled in updateBackspaceHold
+    registerCombo({ ax::EventKeyboard::KeyCode::KEY_BACKSPACE }, [this]() {
+        // Combo fires once on press; the hold loop is managed by updateBackspaceHold(dt)
+        spdlog::debug("Backspace pressed: hold to quit");
+    }, false);
+
+    // Schedule backspace hold update
+    auto director = ax::Director::getInstance();
+    director->getScheduler()->schedule([this](float dt) {
+        this->updateBackspaceHold(dt);
+    }, this, 0.0f, false, 0.0f, false, "backspaceHoldUpdate");
 }
 
 bool InputManager::isKeyDown(ax::EventKeyboard::KeyCode code) const {
@@ -30,12 +49,33 @@ void InputManager::onKeyPressed(ax::EventKeyboard::KeyCode code) {
 
 void InputManager::onKeyReleased(ax::EventKeyboard::KeyCode code) {
     keys.erase(code);
+
+    // Reset backspace quit on any key release
+    if (code == ax::EventKeyboard::KeyCode::KEY_BACKSPACE) {
+        backspaceHoldTime = 0.0f;
+        backspaceDotsCount = 0;
+        backspaceDotTimer = 0.0f;
+        if (quitLabel) {
+            quitLabel->removeFromParent();
+            quitLabel = nullptr;
+        }
+    }
 }
 
 void InputManager::checkCombos(ax::EventKeyboard::KeyCode lastKey) {
-    bool altDown =
-        isKeyDown(ax::EventKeyboard::KeyCode::KEY_LEFT_ALT) ||
-        isKeyDown(ax::EventKeyboard::KeyCode::KEY_RIGHT_ALT);
+    // Evaluate registered combos
+    for (const auto& combo : _combos) {
+        if (combo.requireLastKeyMatch && (combo.keys.empty() || combo.keys.back() != lastKey))
+            continue;
+
+        bool allDown = true;
+        for (auto k : combo.keys) {
+            if (!isKeyDown(k)) { allDown = false; break; }
+        }
+        if (allDown && combo.action) {
+            combo.action();
+        }
+    }
 
     bool ctrlDown =
         isKeyDown(ax::EventKeyboard::KeyCode::KEY_LEFT_CTRL) ||
@@ -45,46 +85,18 @@ void InputManager::checkCombos(ax::EventKeyboard::KeyCode lastKey) {
         isKeyDown(ax::EventKeyboard::KeyCode::KEY_LEFT_SHIFT) ||
         isKeyDown(ax::EventKeyboard::KeyCode::KEY_RIGHT_SHIFT);
 
-    if (altDown && 
-       (lastKey == ax::EventKeyboard::KeyCode::KEY_ENTER ||
-        lastKey == ax::EventKeyboard::KeyCode::KEY_KP_ENTER))
-    {
-        auto view = ax::Director::getInstance()->getRenderView();
-        auto gl   = dynamic_cast<ax::RenderViewImpl*>(view);
-        if (!gl) return;
-
-        if (!gl->isFullscreen()) {
-            gl->getWindowPosition(&this->prevX, &this->prevY);
-            gl->getWindowSize(&this->prevW, &this->prevH);
-            this->hasWindowedState = true;
-
-            gl->setFullscreen();
-        } else {
-            int restoreW = (this->hasWindowedState && this->prevW > 0) ? this->prevW : 1280;
-            int restoreH = (this->hasWindowedState && this->prevH > 0) ? this->prevH : 720;
-            gl->setWindowed(restoreW, restoreH);
-
-            if (this->hasWindowedState) {
-                auto win = gl->getWindow();
-                if (win) {
-                    glfwSetWindowPos(win, this->prevX, this->prevY);
-                }
-            }
-        }
-    }
-
     // Ctrl+Shift+M cycles through detected mods and shows current enable state
     if (ctrlDown && shiftDown && lastKey == ax::EventKeyboard::KeyCode::KEY_M) {
         auto& toggleMgr = cosmiccities::ModToggleManager::get();
         if (!toggleMgr.anyMods()) {
-            std::printf("Mod toggles: no mods found in '%s'\n", toggleMgr.modsDirectory().string().c_str());
+            spdlog::warn("Mod toggles: no mods found in '{}'", toggleMgr.modsDirectory().string());
             return;
         }
 
         const auto& mods = toggleMgr.mods();
         modSelectionIndex = (modSelectionIndex + 1) % mods.size();
         const auto& mod = mods[modSelectionIndex];
-        std::printf("Mod toggles: [%zu/%zu] %s (%s). Press Ctrl+Shift+T to toggle, restart required to apply.\n",
+        spdlog::debug("Mod toggles: [{}/{}] {} ({}). Press Ctrl+Shift+T to toggle, restart required to apply.",
                     modSelectionIndex + 1,
                     mods.size(),
                     mod.id.c_str(),
@@ -95,7 +107,7 @@ void InputManager::checkCombos(ax::EventKeyboard::KeyCode lastKey) {
     if (ctrlDown && shiftDown && lastKey == ax::EventKeyboard::KeyCode::KEY_T) {
         auto& toggleMgr = cosmiccities::ModToggleManager::get();
         if (!toggleMgr.anyMods()) {
-            std::printf("Mod toggles: no mods available to toggle\n");
+            spdlog::warn("Mod toggles: no mods available to toggle");
             return;
         }
 
@@ -109,7 +121,7 @@ void InputManager::checkCombos(ax::EventKeyboard::KeyCode lastKey) {
         if (toggleMgr.setEnabled(mod.id, newState)) {
             toggleMgr.saveState();
             toggleMgr.writeHandshake();
-            std::printf("Mod toggles: '%s' set to %s. Restart the game to apply.\n",
+            spdlog::info("Mod toggles: '{}' set to {}. Restart the game to apply.",
                         mod.id.c_str(), newState ? "enabled" : "disabled");
         }
     }
@@ -127,5 +139,78 @@ void InputManager::checkCombos(ax::EventKeyboard::KeyCode lastKey) {
                 }
             }
         }
+    }
+
+    // F11: toggle devtools (primary keybind)
+    if (lastKey == ax::EventKeyboard::KeyCode::KEY_F11) {
+        DevTools::toggle();
+        spdlog::debug("Devtools: {} (F11)", 
+                    DevTools::isOpen() ? "opened" : "closed");
+    }
+}
+
+void InputManager::registerCombo(const std::vector<ax::EventKeyboard::KeyCode>& keys, const std::function<void()>& action, bool requireLastKeyMatch) {
+    _combos.push_back({keys, action, requireLastKeyMatch});
+}
+
+void InputManager::toggleFullscreen() {
+    auto view = ax::Director::getInstance()->getRenderView();
+    auto gl   = dynamic_cast<ax::RenderViewImpl*>(view);
+    if (!gl) return;
+
+    if (!gl->isFullscreen()) {
+        gl->getWindowPosition(&this->prevX, &this->prevY);
+        gl->getWindowSize(&this->prevW, &this->prevH);
+        this->hasWindowedState = true;
+
+        gl->setFullscreen();
+    } else {
+        int restoreW = (this->hasWindowedState && this->prevW > 0) ? this->prevW : 1280;
+        int restoreH = (this->hasWindowedState && this->prevH > 0) ? this->prevH : 720;
+        gl->setWindowed(restoreW, restoreH);
+
+        if (this->hasWindowedState) {
+            auto win = gl->getWindow();
+            if (win) {
+                glfwSetWindowPos(win, this->prevX, this->prevY);
+            }
+        }
+    }
+}
+
+void InputManager::updateBackspaceHold(float dt) {
+    if (!isKeyDown(ax::EventKeyboard::KeyCode::KEY_BACKSPACE)) {
+        return;
+    }
+
+    backspaceHoldTime += dt;
+    backspaceDotTimer += dt;
+
+    // Create label on first hold
+    if (backspaceHoldTime == dt && !quitLabel) {
+        auto scene = ax::Director::getInstance()->getRunningScene();
+        if (!scene) return;
+
+        quitLabel = LocalisationManager::instance().createLabel("ui.general.quitting");
+        quitLabel->setPosition({20, scene->getContentSize().height - 20});
+        quitLabel->setAnchorPoint({0, 1});
+        scene->addChild(quitLabel, 9999);
+    }
+
+    // Add dot every 0.5 seconds, max 4 dots
+    if (backspaceDotTimer >= 0.5f && backspaceDotsCount < 4) {
+        backspaceDotTimer = 0.0f;
+        backspaceDotsCount++;
+        if (quitLabel) {
+            std::string text = fmt::format("{}{}",
+                LocalisationManager::instance().get("ui.general.quitting"),
+                std::string(backspaceDotsCount, '.'));
+            quitLabel->setString(text);
+        }
+    }
+
+    // Quit when 4 dots reached
+    if (backspaceDotsCount >= 4) {
+        ax::Director::getInstance()->end();
     }
 }
