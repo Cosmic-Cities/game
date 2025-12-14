@@ -42,15 +42,7 @@ void DiscordManager::setPresence(const std::string& state, const std::string& de
     m_largeImageKey = "game_icon";
     m_largeImageText = "Cosmic Cities";
 
-    DiscordRichPresence discordPresence;
-    std::memset(&discordPresence, 0, sizeof(discordPresence));
-    
-    discordPresence.state = m_state.c_str();
-    discordPresence.details = m_details.c_str();
-    discordPresence.largeImageKey = m_largeImageKey.c_str();
-    discordPresence.largeImageText = m_largeImageText.c_str();
-    
-    Discord_UpdatePresence(&discordPresence);
+    updatePresenceInternal();
 }
 
 void DiscordManager::setPresence(const std::string& state, const std::string& details,
@@ -64,6 +56,10 @@ void DiscordManager::setPresence(const std::string& state, const std::string& de
     m_largeImageKey = largeImageKey;
     m_largeImageText = largeImageText;
 
+    updatePresenceInternal();
+}
+
+void DiscordManager::updatePresenceInternal() {
     DiscordRichPresence discordPresence;
     std::memset(&discordPresence, 0, sizeof(discordPresence));
     

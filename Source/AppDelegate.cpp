@@ -76,6 +76,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
     cosmiccities::ModToggleManager::get().initialize("mods");
     
     // Initialize Discord Rich Presence
+    // TODO: Replace with actual Discord application ID from https://discord.com/developers/applications
     DiscordManager::instance().initialize("1234567890123456789");
     DiscordManager::instance().setPresence("In Menu", "Starting game");
     

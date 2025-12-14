@@ -25,4 +25,6 @@ private:
     std::string m_details;
     std::string m_largeImageKey;
     std::string m_largeImageText;
+    
+    void updatePresenceInternal();
 };
