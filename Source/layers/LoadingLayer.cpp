@@ -1,6 +1,7 @@
 #include "LoadingLayer.h"
 #include "../layers/MenuLayer.h"
 #include "../utils/Starfield.h"
+#include "../managers/DiscordManager.h"
 #include <algorithm>
 
 using namespace ax;
