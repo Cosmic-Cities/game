@@ -30,6 +30,7 @@ jobs:
       shell: powershell
       run: |
         cd axmol/1k
+        . .\extensions.ps1
         . .\manifest.ps1
         cd ../..
 
