@@ -26,26 +26,9 @@ jobs:
         choco install ninja -y
         choco install llvm -y
 
-    - name: Setup Axmol
-      shell: powershell
-      run: |
-        cd axmol/1k
-        . .\extensions.ps1
-        . .\manifest.ps1
-        cd ../..
-
-    - name: Create Build Directory
-      run: mkdir -p build
-
-    - name: Configure CMake
-      run: |
-        cd build
-        cmake -G "Ninja Multi-Config" -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
-
     - name: Build
       run: |
-        cd build
-        cmake --build . --config ${{ matrix.build-type }}
+        call run.bat
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
