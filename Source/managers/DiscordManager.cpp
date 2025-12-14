@@ -37,13 +37,18 @@ void DiscordManager::setPresence(const std::string& state, const std::string& de
         return;
     }
 
+    m_state = state;
+    m_details = details;
+    m_largeImageKey = "game_icon";
+    m_largeImageText = "Cosmic Cities";
+
     DiscordRichPresence discordPresence;
     std::memset(&discordPresence, 0, sizeof(discordPresence));
     
-    discordPresence.state = state.c_str();
-    discordPresence.details = details.c_str();
-    discordPresence.largeImageKey = "game_icon";
-    discordPresence.largeImageText = "Cosmic Cities";
+    discordPresence.state = m_state.c_str();
+    discordPresence.details = m_details.c_str();
+    discordPresence.largeImageKey = m_largeImageKey.c_str();
+    discordPresence.largeImageText = m_largeImageText.c_str();
     
     Discord_UpdatePresence(&discordPresence);
 }
@@ -54,13 +59,18 @@ void DiscordManager::setPresence(const std::string& state, const std::string& de
         return;
     }
 
+    m_state = state;
+    m_details = details;
+    m_largeImageKey = largeImageKey;
+    m_largeImageText = largeImageText;
+
     DiscordRichPresence discordPresence;
     std::memset(&discordPresence, 0, sizeof(discordPresence));
     
-    discordPresence.state = state.c_str();
-    discordPresence.details = details.c_str();
-    discordPresence.largeImageKey = largeImageKey.c_str();
-    discordPresence.largeImageText = largeImageText.c_str();
+    discordPresence.state = m_state.c_str();
+    discordPresence.details = m_details.c_str();
+    discordPresence.largeImageKey = m_largeImageKey.c_str();
+    discordPresence.largeImageText = m_largeImageText.c_str();
     
     Discord_UpdatePresence(&discordPresence);
 }

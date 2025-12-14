@@ -56,4 +56,7 @@ public:
     @since axmol-2.10.0
 	*/
     void applicationWillQuit() override;
+
+private:
+    void updateDiscord(float dt);
 };

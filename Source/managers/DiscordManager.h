@@ -19,4 +19,10 @@ private:
     DiscordManager() = default;
     
     bool m_initialized = false;
+    
+    // Store strings to ensure they persist for Discord
+    std::string m_state;
+    std::string m_details;
+    std::string m_largeImageKey;
+    std::string m_largeImageText;
 };

@@ -79,6 +79,17 @@ bool AppDelegate::applicationDidFinishLaunching() {
     DiscordManager::instance().initialize("1234567890123456789");
     DiscordManager::instance().setPresence("In Menu", "Starting game");
     
+    // Schedule Discord callbacks update
+    director->getScheduler()->schedule(
+        AX_SCHEDULE_SELECTOR(AppDelegate::updateDiscord),
+        this,
+        1.0f,  // Update every second
+        ax::macro::kRepeatForever,
+        0.0f,
+        false,
+        "discord_update"
+    );
+    
     auto scene = cosmiccities::LoadingLayer::scene();
 
     director->runWithScene(scene);
@@ -108,4 +119,8 @@ void AppDelegate::applicationWillEnterForeground() {
 
 void AppDelegate::applicationWillQuit() {
     DiscordManager::instance().shutdown();
+}
+
+void AppDelegate::updateDiscord(float dt) {
+    DiscordManager::instance().update();
 }
