@@ -25,8 +25,9 @@ jobs:
     - name: Build sources-migrate
       shell: pwsh
       run: |
-        git clone --depth=1 https://github.com/axmolengine/axmol $HOME/axmol
-        . $HOME/axmol/build.ps1 -d "$HOME/axmol" -xb '--config','Release','--target','sources-migrate'
+        git clone --depth=1 https://github.com/axmolengine/axmol "$HOME/axmol"
+        $script = Join-Path $HOME 'axmol/build.ps1'
+        & $script -d (Join-Path $HOME 'axmol') -xb '--config','Release','--target','sources-migrate'
     - name: Migrate sources
       run: |
         git checkout main
