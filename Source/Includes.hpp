@@ -11,6 +11,7 @@
 
 #include "layers/LoadingLayer.h"
 #include "layers/MenuLayer.h"
+#include "layers/ProgressionLayer.h"
 
 #include "utils/Starfield.h"
 #include "utils/InputManager.h"
@@ -20,3 +21,5 @@
 #include "extras/MenuItemExtra.h"
 
 #include "platform/RenderViewImpl.h"
+
+#include "audio/AudioEngine.h"

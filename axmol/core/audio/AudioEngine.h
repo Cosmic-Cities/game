@@ -304,6 +304,14 @@ public:
     static AudioState getState(AUDIO_ID audioID);
 
     /**
+     * Gets the file path of an audio instance.
+     *
+     * @param audioID An audioID returned by the play2d function.
+     * @return The file path of the audio instance.
+     */
+    static std::string getFilePath(AUDIO_ID audioID);
+
+    /**
      * Register a callback to be invoked when an audio instance has completed playing.
      *
      * @param audioID An audioID returned by the play2d function.

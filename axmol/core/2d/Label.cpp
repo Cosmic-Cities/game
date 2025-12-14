@@ -861,6 +861,11 @@ bool Label::setBMFontFilePath(std::string_view bmfontFilePath, float fontSize)
     _currentLabelType = LabelType::BMFONT;
     setFontAtlas(newAtlas);
 
+    if (_fontAtlas)
+    {
+        _fontAtlas->setAliasTexParameters();
+    }
+
     return true;
 }
 
@@ -897,6 +902,11 @@ bool Label::setBMFontFilePath(std::string_view bmfontFilePath, const Rect& image
     _currentLabelType = LabelType::BMFONT;
     setFontAtlas(newAtlas);
 
+    if (_fontAtlas)
+    {
+        _fontAtlas->setAliasTexParameters();
+    }
+
     return true;
 }
 
@@ -931,6 +941,11 @@ bool Label::setBMFontFilePath(std::string_view bmfontFilePath, std::string_view 
 
     _currentLabelType = LabelType::BMFONT;
     setFontAtlas(newAtlas);
+
+    if (_fontAtlas)
+    {
+        _fontAtlas->setAliasTexParameters();
+    }
 
     return true;
 }

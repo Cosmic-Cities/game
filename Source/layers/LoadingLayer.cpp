@@ -1,7 +1,6 @@
 #include "LoadingLayer.h"
 #include "../layers/MenuLayer.h"
 #include "../utils/Starfield.h"
-#include "audio/AudioEngine.h"
 #include <algorithm>
 
 using namespace ax;
@@ -12,12 +11,13 @@ bool LoadingLayer::init() {
 
     auto winSize = Director::getInstance()->getWinSize();
 
+    LocalisationManager::instance().setLanguage("Content/locales/en-GB.json");
+
     auto bg = Starfield::create(480, 360, 100, 0.25f);
     if (bg) addChild(bg);
 
     auto rod = Label::createWithBMFont("fonts/pixel_operator/pixel_operator.fnt", "OmgRod");
     if (rod) {
-        rod->getFontAtlas()->setAliasTexParameters();
         rod->setPosition(winSize.width * 0.5f, winSize.height * 0.5f);
         rod->setColor(Color3B::WHITE);
         addChild(rod);
@@ -48,7 +48,7 @@ bool LoadingLayer::init() {
         addChild(_progressText);
     }
     
-    _stepText = Label::createWithBMFont("fonts/pixel_operator/pixel_operator.fnt", "");
+    _stepText = LocalisationManager::instance().createLabel("ui.loading.beginning", "Starting load...");
     if (_stepText) {
         _stepText->setAnchorPoint({0.5f, 0.5f});
         _stepText->setPosition(barPos.x + barW * 0.5f, barPos.y - 18.f);
@@ -102,8 +102,6 @@ void LoadingLayer::beginLoading() {
     _totalCount = 0;
     _loadStep = 0;
     _stepsDone = false;
-
-    LocalisationManager::instance().setLanguage("Content/locales/en-GB.json");
 
     this->schedule(AX_SCHEDULE_SELECTOR(LoadingLayer::tickLoad), 0.0f);
 }

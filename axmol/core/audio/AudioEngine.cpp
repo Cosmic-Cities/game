@@ -561,6 +561,17 @@ AudioEngine::AudioState AudioEngine::getState(AUDIO_ID audioID)
     return AudioState::ERROR;
 }
 
+std::string AudioEngine::getFilePath(AUDIO_ID audioID)
+{
+    auto tmpIterator = _audioIDInfoMap.find(audioID);
+    if (tmpIterator != _audioIDInfoMap.end())
+    {
+        return tmpIterator->second.filePath;
+    }
+
+    return "";
+}
+
 AudioProfile* AudioEngine::getProfile(AUDIO_ID audioID)
 {
     auto it = _audioIDInfoMap.find(audioID);

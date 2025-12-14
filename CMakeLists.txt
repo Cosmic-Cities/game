@@ -92,7 +92,7 @@ CPMAddPackage(
 CPMAddPackage("gh:digint/tinyfsm#v0.3.3")
 CPMAddPackage("gh:skypjack/entt#v3.16.0")
 CPMAddPackage("gh:g-truc/glm#1.0.2")
-CPMAddPackage("gh:ThePhD/sol2#v3.3.0")
+CPMAddPackage("gh:OmgRod/sol2#develop")
 CPMAddPackage("gh:icculus/physfs#main")
 CPMAddPackage("gh:lz4/lz4#v1.10.0")
 

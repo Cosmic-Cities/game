@@ -552,7 +552,7 @@ function(ax_setup_app_config app_name)
 
     if((WIN32 AND(NOT WINRT)) OR LINUX)
       if(NOT DEFINED AX_PREBUILT_DIR)
-        ax_sync_target_res(${app_name} LINK_TO "${rt_output}/${CMAKE_CFG_INTDIR}/axslc" FOLDERS ${AXSLCC_OUT_DIR} SYM_LINK 1 SYNC_TARGET_ID axslc)
+        ax_sync_target_res(${app_name} LINK_TO "${rt_output}/${CMAKE_CFG_INTDIR}/axslc" FOLDERS ${AXSLCC_OUT_DIR} SYNC_TARGET_ID axslc)
       else() # linking with prebuilt, can't use symlink
         ax_sync_target_res(${app_name} LINK_TO "${rt_output}/${CMAKE_CFG_INTDIR}/axslc" FOLDERS ${AXSLCC_OUT_DIR} SYNC_TARGET_ID axslc)
       endif()

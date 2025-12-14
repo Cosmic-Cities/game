@@ -1,6 +1,6 @@
 if((NOT APPLE) AND(NOT WINRT))
   ax_get_resource_path(APP_RES_DIR ${APP_NAME})
-  ax_sync_target_res(${APP_NAME} LINK_TO ${APP_RES_DIR} FOLDERS ${content_folder} SYM_LINK 1)
+  ax_sync_target_res(${APP_NAME} LINK_TO ${APP_RES_DIR} FOLDERS ${content_folder})
 
   if((WINDOWS AND(NOT(CMAKE_GENERATOR MATCHES "Ninja"))))
     set_property(TARGET ${APP_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${content_folder}")
