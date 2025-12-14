@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "axmol-latest" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "axmol-latest" ]
+    branches: [ "main" ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
