@@ -32,6 +32,7 @@
 #endif
 
 #include "utils/ModToggleManager.h"
+#include "managers/DiscordManager.h"
 
 using namespace ax;
 
@@ -74,6 +75,10 @@ bool AppDelegate::applicationDidFinishLaunching() {
     // Discover mods and write a handshake for MinHook-driven loaders
     cosmiccities::ModToggleManager::get().initialize("mods");
     
+    // Initialize Discord Rich Presence
+    DiscordManager::instance().initialize("1234567890123456789");
+    DiscordManager::instance().setPresence("In Menu", "Starting game");
+    
     auto scene = cosmiccities::LoadingLayer::scene();
 
     director->runWithScene(scene);
@@ -87,6 +92,8 @@ void AppDelegate::applicationDidEnterBackground() {
 #if USE_AUDIO_ENGINE
     AudioEngine::pauseAll();
 #endif
+
+    DiscordManager::instance().setPresence("Away", "Game minimized");
 }
 
 void AppDelegate::applicationWillEnterForeground() {
@@ -95,6 +102,10 @@ void AppDelegate::applicationWillEnterForeground() {
 #if USE_AUDIO_ENGINE
     AudioEngine::resumeAll();
 #endif
+
+    DiscordManager::instance().setPresence("In Game", "Playing");
 }
 
-void AppDelegate::applicationWillQuit() {}
+void AppDelegate::applicationWillQuit() {
+    DiscordManager::instance().shutdown();
+}

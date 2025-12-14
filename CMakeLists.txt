@@ -95,6 +95,14 @@ CPMAddPackage("gh:g-truc/glm#1.0.2")
 CPMAddPackage("gh:OmgRod/sol2#develop")
 CPMAddPackage("gh:icculus/physfs#main")
 CPMAddPackage("gh:lz4/lz4#v1.10.0")
+CPMAddPackage(
+  NAME discord-rpc
+  GITHUB_REPOSITORY discord/discord-rpc
+  GIT_TAG v3.4.0
+  OPTIONS 
+    "BUILD_EXAMPLES OFF"
+    "BUILD_SHARED_LIBS OFF"
+)
 
 # Include directories for all CPM packages
 target_include_directories(${PROJECT_NAME} PRIVATE 
@@ -109,9 +117,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${sol2_SOURCE_DIR}/include
   ${physfs_SOURCE_DIR}/src
   ${lz4_SOURCE_DIR}/lib
+  ${discord-rpc_SOURCE_DIR}/include
 )
 
-target_link_libraries(${PROJECT_NAME} minhook)
+target_link_libraries(${PROJECT_NAME} minhook discord-rpc)
 
 # Provide Lua headers/library for sol2 usage
 if(TARGET plainlua)
