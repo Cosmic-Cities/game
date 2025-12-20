@@ -2,8 +2,16 @@
 
 USING_NS_AX;
 
+static const std::vector<std::string> DEFAULT_BUTTON_SOUNDS = {
+    "sounds/sfx.blip.1.wav",
+    "sounds/sfx.blip.2.wav",
+    "sounds/sfx.blip.3.wav",
+    "sounds/sfx.blip.4.wav",
+    "sounds/sfx.blip.5.wav"
+};
+
 MenuItemExtra* MenuItemExtra::create(Node* content, const ccMenuCallback& callback) {
-    return create(content, callback, {});
+    return create(content, callback, DEFAULT_BUTTON_SOUNDS);
 }
 
 MenuItemExtra* MenuItemExtra::create(Node* content, const ccMenuCallback& callback, const std::vector<std::string>& soundPaths) {
@@ -88,7 +96,9 @@ void MenuItemExtra::onMouseUp(EventMouse* event) {
     if (_pressed) {
         _pressed = false;
         if (inside) {
+            _activatingFromMouse = true;
             activate();
+            _activatingFromMouse = false;
         }
         if (_hovered && inside) {
             setHover();
@@ -114,27 +124,23 @@ bool MenuItemExtra::isInside(const Vec2& worldPoint) const {
 }
 
 void MenuItemExtra::selected() {
-    MenuItem::selected();
-    setPressed();
+    // Override to do nothing - we handle hover states with custom mouse events
 }
 
 void MenuItemExtra::unselected() {
-    MenuItem::unselected();
-    _soundPlayed = false;
-    if (_hovered)
-        setHover();
-    else
-        setNormal();
+    // Override to do nothing - we handle hover states with custom mouse events
 }
 
 void MenuItemExtra::activate() {
+    // Only process activations from our custom mouse events, ignore Menu's built-in touch system
+    if (!_activatingFromMouse) return;
+    
     if (!_soundPaths.empty() && !_soundPlayed) {
         _soundPlayed = true;
         int randomIndex = ax::RandomHelper::random_int(0, static_cast<int>(_soundPaths.size() - 1));
         AudioEngine::play2d(_soundPaths[randomIndex]);
     }
-    if (_hovered)
-        MenuItem::activate();
+    MenuItem::activate();
 }
 
 void MenuItemExtra::setNormal() {

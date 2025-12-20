@@ -20,6 +20,7 @@ bool MenuLayer::init() {
 
     auto bg = Starfield::create(480, 360, 120, 0.4f);
     bg->setName("background");
+    bg->setLocalZOrder(INT_MIN);
     addChild(bg);
 
     auto logo = Sprite::create("sprites/CC_titleLogo_001.png");
@@ -27,12 +28,13 @@ bool MenuLayer::init() {
     float logoScale = winSize.width / logo->getContentSize().width * 0.8f;
     logo->setScale(logoScale);
     logo->setPosition({ winSize.width * 0.5f, winSize.height - 100.f });
-    logo->setLocalZOrder(0);
+    logo->setLocalZOrder(-1);
     addChild(logo);
     
     auto splashText = lm.createLabel(fmt::format("ui.splash.s{}", fmt::format("{:02d}", ax::random(1, 13))));
     splashText->setName("splash-text");
     splashText->setColor({ 255, 255, 0 });
+    splashText->setLocalZOrder(100);
     setupSplashText(splashText, logo);
     
     if (s_introMusicId < 0 || AudioEngine::getState(s_introMusicId) != AudioEngine::AudioState::PLAYING 
@@ -53,14 +55,7 @@ bool MenuLayer::init() {
     labelCopyright->setAnchorPoint({0, 0});
     auto copyright = MenuItemExtra::create(
         labelCopyright,
-        AX_CALLBACK_1(MenuLayer::onOmgrodClick, this),
-        {
-            "sounds/sfx.blip.1.wav",
-            "sounds/sfx.blip.2.wav",
-            "sounds/sfx.blip.3.wav",
-            "sounds/sfx.blip.4.wav",
-            "sounds/sfx.blip.5.wav"
-        }
+        AX_CALLBACK_1(MenuLayer::onOmgrodClick, this)
     );
     copyright->setName("copyright-label");
     copyright->setScale(0.5f);
@@ -77,25 +72,13 @@ bool MenuLayer::init() {
     menu->setAlignCross(LayoutMenu::AlignCross::Center);
     menu->setGap(10.f);
 
-    /*auto button = MenuItemExtra::create(lm.createLabel("ui.general.yes"), AX_CALLBACK_1(MenuLayer::test, this), {
-        "sounds/sfx.blip.1.wav",
-        "sounds/sfx.blip.2.wav",
-        "sounds/sfx.blip.3.wav",
-        "sounds/sfx.blip.4.wav",
-        "sounds/sfx.blip.5.wav"
-    });
+    /*auto button = MenuItemExtra::create(lm.createLabel("ui.general.yes"), AX_CALLBACK_1(MenuLayer::test, this)});
     button->setName("test-button");
     menu->addChild(button);*/
 
     auto labelPlay = lm.createLabel("ui.menu.start");
     labelPlay->setAnchorPoint({0, 0});
-    auto playBtn = MenuItemExtra::create(labelPlay, AX_CALLBACK_1(MenuLayer::onPlay, this), {
-        "sounds/sfx.blip.1.wav",
-        "sounds/sfx.blip.2.wav",
-        "sounds/sfx.blip.3.wav",
-        "sounds/sfx.blip.4.wav",
-        "sounds/sfx.blip.5.wav"
-    });
+    auto playBtn = MenuItemExtra::create(labelPlay, AX_CALLBACK_1(MenuLayer::onPlay, this));
     playBtn->setName("play-button");
     playBtn->setTag(10);
     playBtn->setAnchorPoint({0.5f, 0.5f});
@@ -103,13 +86,7 @@ bool MenuLayer::init() {
 
     auto labelSettings = lm.createLabel("ui.menu.options");
     labelSettings->setAnchorPoint({0, 0});
-    auto settingsBtn = MenuItemExtra::create(labelSettings, AX_CALLBACK_1(MenuLayer::onSettings, this), {
-        "sounds/sfx.blip.1.wav",
-        "sounds/sfx.blip.2.wav",
-        "sounds/sfx.blip.3.wav",
-        "sounds/sfx.blip.4.wav",
-        "sounds/sfx.blip.5.wav"
-    });
+    auto settingsBtn = MenuItemExtra::create(labelSettings, AX_CALLBACK_1(MenuLayer::onSettings, this));
     settingsBtn->setName("settings-button");
     settingsBtn->setTag(20);
     settingsBtn->setAnchorPoint({0.5f, 0.5f});
@@ -117,13 +94,7 @@ bool MenuLayer::init() {
 
     auto labelCredits = lm.createLabel("ui.menu.credits");
     labelCredits->setAnchorPoint({0, 0});
-    auto creditsBtn = MenuItemExtra::create(labelCredits, AX_CALLBACK_1(MenuLayer::onCredits, this), {
-        "sounds/sfx.blip.1.wav",
-        "sounds/sfx.blip.2.wav",
-        "sounds/sfx.blip.3.wav",
-        "sounds/sfx.blip.4.wav",
-        "sounds/sfx.blip.5.wav"
-    });
+    auto creditsBtn = MenuItemExtra::create(labelCredits, AX_CALLBACK_1(MenuLayer::onCredits, this));
     creditsBtn->setName("credits-button");
     creditsBtn->setTag(30);
     creditsBtn->setAnchorPoint({0.5f, 0.5f});
@@ -131,13 +102,7 @@ bool MenuLayer::init() {
 
     auto labelQuit = lm.createLabel("ui.menu.exit");
     labelQuit->setAnchorPoint({0, 0});
-    auto quitBtn = MenuItemExtra::create(labelQuit, AX_CALLBACK_1(MenuLayer::onQuit, this), {
-        "sounds/sfx.blip.1.wav",
-        "sounds/sfx.blip.2.wav",
-        "sounds/sfx.blip.3.wav",
-        "sounds/sfx.blip.4.wav",
-        "sounds/sfx.blip.5.wav"
-    });
+    auto quitBtn = MenuItemExtra::create(labelQuit, AX_CALLBACK_1(MenuLayer::onQuit, this));
     quitBtn->setName("quit-button");
     quitBtn->setTag(40);
     quitBtn->setAnchorPoint({0.5f, 0.5f});
@@ -209,13 +174,28 @@ void MenuLayer::setupSplashText(ax::Label* splashText, ax::Sprite* logoNode) {
     splashText->setRotation(rotationDeg);
     splashText->setScale(maxSplashScale);
     splashText->setPosition({ targetX, targetY });
-    splashText->setLocalZOrder(10);
 
     auto scaleDown = EaseSineInOut::create(ScaleTo::create(2.0f, minSplashScale));
     auto scaleUp = EaseSineInOut::create(ScaleTo::create(2.0f, maxSplashScale));
     auto seq = Sequence::create(scaleDown, scaleUp, nullptr);
     auto repeatSeq = RepeatForever::create(seq);
     splashText->runAction(repeatSeq);
+
+    auto mouseListener = EventListenerMouse::create();
+    mouseListener->onMouseMove = [splashText](EventMouse* event) {
+        Vec2 mousePos = event->getLocation();
+        Vec2 localPos = splashText->convertToNodeSpace(mousePos);
+        auto size = splashText->getContentSize();
+        Rect bounds(0, 0, size.width, size.height);
+        
+        if (bounds.containsPoint(localPos)) {
+            splashText->setColor({ 200, 200, 0 });
+        } else {
+            splashText->setColor({ 255, 255, 0 });
+        }
+        return false;
+    };
+    splashText->getEventDispatcher()->addEventListenerWithSceneGraphPriority(mouseListener, splashText);
 
     addChild(splashText);
 }
