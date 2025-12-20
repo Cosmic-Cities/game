@@ -15,7 +15,7 @@
 # set(AX_ENABLE_EXT_COCOSTUDIO OFF CACHE BOOL "Build extension cocostudio" FORCE)
 # set(AX_ENABLE_EXT_FAIRYGUI OFF CACHE BOOL "Build extension FairyGUI" FORCE)
 # set(AX_ENABLE_EXT_IMGUI OFF CACHE BOOL "Build extension ImGui" FORCE)
-# set(AX_ENABLE_EXT_JSONDEFAULT OFF CACHE BOOL "Build extension JSONDefault" FORCE)
+set(AX_ENABLE_EXT_JSONDEFAULT ON CACHE BOOL "Build extension JSONDefault" FORCE)
 
 # 3D Support - - default: ON
 # set(AX_ENABLE_3D ON CACHE BOOL "Build 3D support" FORCE)
@@ -30,7 +30,7 @@
 # set(AX_ENABLE_EXT_PHYSICS_NODE ON CACHE BOOL "Build extension physics-nodes" FORCE)
 
 # These depend on AX_EXT_HINT & AX_ENABLE_EXT_IMGUI - default: ON
-# set(AX_ENABLE_EXT_INSPECTOR ON CACHE BOOL "Enable extension Inspector" FORCE)
+set(AX_ENABLE_EXT_INSPECTOR ON CACHE BOOL "Enable extension Inspector" FORCE)
 # set(AX_ENABLE_EXT_SDFGEN ON CACHE BOOL "Build extension SDFGen" FORCE)
 
 # The follow options are set individually - default: OFF

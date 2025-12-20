@@ -21,12 +21,11 @@ bool MenuItemExtra::init(Node* content, const ccMenuCallback& callback) {
         return false;
 
     _content = content;
-    _content->setAnchorPoint({0.5f, 0.5f});
     _content->setPosition({0, 0});
     this->addChild(_content);
 
     this->setContentSize(content->getContentSize());
-    this->setAnchorPoint({0.5f, 0.5f});
+    this->setAnchorPoint(_content->getAnchorPoint());
 
     setupMouseEvents();
     setNormal();
@@ -100,10 +99,17 @@ void MenuItemExtra::onMouseUp(EventMouse* event) {
 }
 
 bool MenuItemExtra::isInside(const Vec2& worldPoint) const {
+    if (!_content) return false;
+    
     Vec2 local = convertToNodeSpace(worldPoint);
-    const auto size = getContentSize();
-    const auto ap = getAnchorPoint();
-    Rect bounds(-ap.x * size.width, -ap.y * size.height, size.width, size.height);
+    
+    const auto contentSize = _content->getContentSize();
+    const auto contentAp = _content->getAnchorPoint();
+    const auto contentPos = _content->getPosition();
+    
+    Vec2 contentOrigin = contentPos + Vec2(-contentAp.x * contentSize.width, -contentAp.y * contentSize.height);
+    
+    Rect bounds(contentOrigin, contentSize);
     return bounds.containsPoint(local);
 }
 
@@ -114,6 +120,7 @@ void MenuItemExtra::selected() {
 
 void MenuItemExtra::unselected() {
     MenuItem::unselected();
+    _soundPlayed = false;
     if (_hovered)
         setHover();
     else

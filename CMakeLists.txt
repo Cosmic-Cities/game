@@ -40,6 +40,7 @@ file(GLOB_RECURSE GAME_SOURCE
 
 list(FILTER GAME_SOURCE EXCLUDE REGEX ".*/Source/utils/(HookManager|ModAPI|ModLoader)\\.cpp")
 list(FILTER GAME_HEADER EXCLUDE REGEX ".*/Source/utils/(HookManager|ModAPI|ModLoader)\\.h")
+list(FILTER GAME_SOURCE EXCLUDE REGEX ".*/Source/managers/SaveManager_Example\\.cpp")
 
 set(GAME_INC_DIRS
   "${CMAKE_CURRENT_SOURCE_DIR}/Source"
@@ -69,7 +70,6 @@ ax_setup_app_config(${APP_NAME})
 include(CPM)
 
 CPMAddPackage("gh:aantron/better-enums#0.11.3")
-CPMAddPackage("gh:nlohmann/json#v3.11.3")
 CPMAddPackage("gh:catchorg/Catch2#v3.11.0")
 CPMAddPackage(
   NAME minhook
@@ -80,16 +80,18 @@ CPMAddPackage(
 CPMAddPackage("gh:gabime/spdlog#v1.16.0")
 CPMAddPackage(
   NAME sqlite3
-  GITHUB_REPOSITORY sqlite/sqlite
-  GIT_TAG version-3.51.1
-  OPTIONS "BUILD_SHARED_LIBS ON"
+  GITHUB_REPOSITORY SRombauts/SQLiteCpp
+  GIT_TAG 3.3.2
+  OPTIONS
+    "SQLITECPP_RUN_CPPLINT OFF"
+    "SQLITECPP_RUN_CPPCHECK OFF"
+    "SQLITECPP_INTERNAL_SQLITE ON"
 )
 CPMAddPackage("gh:digint/tinyfsm#v0.3.3")
 CPMAddPackage("gh:skypjack/entt#v3.16.0")
 CPMAddPackage("gh:g-truc/glm#1.0.2")
 CPMAddPackage("gh:OmgRod/sol2#develop")
 CPMAddPackage("gh:icculus/physfs#main")
-CPMAddPackage("gh:lz4/lz4#v1.10.0")
 
 option(ENABLE_DISCORD "Enable Discord Rich Presence integration" OFF)
 
@@ -131,7 +133,6 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
   ${better_enums_SOURCE_DIR}
-  ${nlohmann_json_SOURCE_DIR}/include
   ${Catch2_SOURCE_DIR}/include
   ${minhook_SOURCE_DIR}/include
   ${spdlog_SOURCE_DIR}/include
@@ -140,7 +141,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${glm_SOURCE_DIR}
   ${sol2_SOURCE_DIR}/include
   ${physfs_SOURCE_DIR}/src
-  ${lz4_SOURCE_DIR}/lib
+  ${CMAKE_CURRENT_SOURCE_DIR}/axmol/3rdparty/rapidjson/include
+  ${sqlite3_SOURCE_DIR}/include
 )
 
 if(ENABLE_DISCORD)
@@ -148,7 +150,7 @@ if(ENABLE_DISCORD)
   target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_DISCORD)
 endif()
 
-target_link_libraries(${PROJECT_NAME} minhook)
+target_link_libraries(${PROJECT_NAME} minhook SQLiteCpp sqlite3)
 
 if(ENABLE_DISCORD)
   target_link_libraries(${PROJECT_NAME} ${DISCORD_LIB_PATH})

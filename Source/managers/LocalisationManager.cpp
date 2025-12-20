@@ -1,4 +1,6 @@
 #include "LocalisationManager.h"
+#include "rapidjson/istreamwrapper.h"
+#include "rapidjson/error/en.h"
 
 LocalisationManager& LocalisationManager::instance() {
     static LocalisationManager inst;
@@ -11,13 +13,15 @@ bool LocalisationManager::loadLanguage(const std::string& path) {
         return false;
     }
 
-    try {
-        file >> m_languageData;
-        m_currentPath = path;
-        return true;
-    } catch (...) {
+    rapidjson::IStreamWrapper isw(file);
+    m_languageData.ParseStream(isw);
+    
+    if (m_languageData.HasParseError()) {
         return false;
     }
+    
+    m_currentPath = path;
+    return true;
 }
 
 bool LocalisationManager::setLanguage(const std::string& path) {
@@ -35,22 +39,22 @@ bool LocalisationManager::setLanguage(const std::string& path) {
 }
 
 std::string LocalisationManager::get(const std::string& key, const std::string& fallback) const {
-    if (m_languageData.is_null())
+    if (m_languageData.IsNull() || !m_languageData.IsObject())
         return fallback;
 
-    const json* current = &m_languageData;
+    const rapidjson::Value* current = &m_languageData;
 
     std::stringstream ss(key);
     std::string token;
 
     while (std::getline(ss, token, '.')) {
-        if (!current->contains(token))
+        if (!current->IsObject() || !current->HasMember(token.c_str()))
             return fallback;
-        current = &(*current)[token];
+        current = &(*current)[token.c_str()];
     }
 
-    if (current->is_string())
-        return current->get<std::string>();
+    if (current->IsString())
+        return current->GetString();
 
     return fallback;
 }
@@ -64,9 +68,12 @@ const std::string& LocalisationManager::currentLocale() const {
 }
 
 std::string LocalisationManager::getFontPath() const {
-    if (!m_indexData.is_null() && !m_currentLocale.empty()) {
-        if (m_indexData.contains(m_currentLocale) && m_indexData[m_currentLocale].contains("font")) {
-            return m_indexData[m_currentLocale]["font"].get<std::string>();
+    if (!m_indexData.IsNull() && m_indexData.IsObject() && !m_currentLocale.empty()) {
+        if (m_indexData.HasMember(m_currentLocale.c_str())) {
+            const auto& localeObj = m_indexData[m_currentLocale.c_str()];
+            if (localeObj.IsObject() && localeObj.HasMember("font") && localeObj["font"].IsString()) {
+                return localeObj["font"].GetString();
+            }
         }
     }
     
@@ -74,9 +81,12 @@ std::string LocalisationManager::getFontPath() const {
 }
 
 std::string LocalisationManager::getLanguageName() const {
-    if (!m_indexData.is_null() && !m_currentLocale.empty()) {
-        if (m_indexData.contains(m_currentLocale) && m_indexData[m_currentLocale].contains("language")) {
-            return m_indexData[m_currentLocale]["language"].get<std::string>();
+    if (!m_indexData.IsNull() && m_indexData.IsObject() && !m_currentLocale.empty()) {
+        if (m_indexData.HasMember(m_currentLocale.c_str())) {
+            const auto& localeObj = m_indexData[m_currentLocale.c_str()];
+            if (localeObj.IsObject() && localeObj.HasMember("language") && localeObj["language"].IsString()) {
+                return localeObj["language"].GetString();
+            }
         }
     }
     
@@ -84,9 +94,12 @@ std::string LocalisationManager::getLanguageName() const {
 }
 
 std::string LocalisationManager::getRegion() const {
-    if (!m_indexData.is_null() && !m_currentLocale.empty()) {
-        if (m_indexData.contains(m_currentLocale) && m_indexData[m_currentLocale].contains("region")) {
-            return m_indexData[m_currentLocale]["region"].get<std::string>();
+    if (!m_indexData.IsNull() && m_indexData.IsObject() && !m_currentLocale.empty()) {
+        if (m_indexData.HasMember(m_currentLocale.c_str())) {
+            const auto& localeObj = m_indexData[m_currentLocale.c_str()];
+            if (localeObj.IsObject() && localeObj.HasMember("region") && localeObj["region"].IsString()) {
+                return localeObj["region"].GetString();
+            }
         }
     }
     
@@ -98,21 +111,26 @@ bool LocalisationManager::loadIndex() {
     if (!file.is_open())
         return false;
 
-    try {
-        file >> m_indexData;
-        return true;
-    } catch (...) {
+    rapidjson::IStreamWrapper isw(file);
+    m_indexData.ParseStream(isw);
+    
+    if (m_indexData.HasParseError()) {
         return false;
     }
+    
+    return true;
 }
 
 ax::Label* LocalisationManager::createLabel(const std::string& key, const std::string& fallback) const {
     std::string text = get(key, fallback);
     std::string fontPath;
 
-    if (!m_indexData.is_null() && !m_currentLocale.empty()) {
-        if (m_indexData.contains(m_currentLocale) && m_indexData[m_currentLocale].contains("font")) {
-            fontPath = m_indexData[m_currentLocale]["font"].get<std::string>();
+    if (!m_indexData.IsNull() && m_indexData.IsObject() && !m_currentLocale.empty()) {
+        if (m_indexData.HasMember(m_currentLocale.c_str())) {
+            const auto& localeObj = m_indexData[m_currentLocale.c_str()];
+            if (localeObj.IsObject() && localeObj.HasMember("font") && localeObj["font"].IsString()) {
+                fontPath = localeObj["font"].GetString();
+            }
         }
     }
 

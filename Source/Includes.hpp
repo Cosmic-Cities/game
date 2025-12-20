@@ -4,7 +4,6 @@
 #include <sstream>
 #include <string>
 
-#include <nlohmann/json.hpp>
 #include "axmol.h"
 #include <AL/al.h>
 
@@ -20,6 +19,7 @@
 #include "managers/LocalisationManager.h"
 
 #include "extras/MenuItemExtra.h"
+#include "extras/LayoutMenu.h"
 
 #include "platform/RenderViewImpl.h"
 

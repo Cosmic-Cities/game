@@ -5,7 +5,11 @@
 #include <fstream>
 #include <unordered_map>
 
-#include <nlohmann/json.hpp>
+#include "rapidjson/document.h"
+#include "rapidjson/istreamwrapper.h"
+#include "rapidjson/ostreamwrapper.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/prettywriter.h"
 #include <spdlog/spdlog.h>
 
 namespace cosmiccities {
@@ -115,23 +119,26 @@ void ModToggleManager::loadState() {
         return;
     }
 
-    nlohmann::json j;
-    try {
-        in >> j;
-    } catch (const std::exception& e) {
-        spdlog::error("ModToggleManager: Failed to parse state file '{}' ({})",
-                    statePath.string(), e.what());
+    rapidjson::Document doc;
+    rapidjson::IStreamWrapper isw(in);
+    doc.ParseStream(isw);
+    
+    if (doc.HasParseError()) {
+        spdlog::error("ModToggleManager: Failed to parse state file '{}'",
+                    statePath.string());
         return;
     }
 
-    if (!j.is_object() || !j.contains("mods") || !j["mods"].is_array()) return;
+    if (!doc.IsObject() || !doc.HasMember("mods") || !doc["mods"].IsArray()) return;
 
     std::unordered_map<std::string, bool> saved;
-    for (const auto& item : j["mods"]) {
-        if (!item.is_object()) continue;
-        if (!item.contains("id") || !item.contains("enabled")) continue;
-        if (!item["id"].is_string() || !item["enabled"].is_boolean()) continue;
-        saved[item["id"].get<std::string>()] = item["enabled"].get<bool>();
+    const auto& modsArray = doc["mods"];
+    for (rapidjson::SizeType i = 0; i < modsArray.Size(); i++) {
+        const auto& item = modsArray[i];
+        if (!item.IsObject()) continue;
+        if (!item.HasMember("id") || !item.HasMember("enabled")) continue;
+        if (!item["id"].IsString() || !item["enabled"].IsBool()) continue;
+        saved[item["id"].GetString()] = item["enabled"].GetBool();
     }
 
     for (auto& mod : _mods) {
@@ -199,15 +206,19 @@ ModToggleEntry* ModToggleManager::selected() {
 
 void ModToggleManager::saveState() const {
     const auto statePath = _modsDir / kStateFile;
-    nlohmann::json j;
-    j["mods"] = nlohmann::json::array();
-
+    
+    rapidjson::Document doc;
+    doc.SetObject();
+    auto& allocator = doc.GetAllocator();
+    
+    rapidjson::Value modsArray(rapidjson::kArrayType);
     for (const auto& mod : _mods) {
-        nlohmann::json item;
-        item["id"] = mod.id;
-        item["enabled"] = mod.enabled;
-        j["mods"].push_back(item);
+        rapidjson::Value item(rapidjson::kObjectType);
+        item.AddMember("id", rapidjson::Value(mod.id.c_str(), allocator), allocator);
+        item.AddMember("enabled", mod.enabled, allocator);
+        modsArray.PushBack(item, allocator);
     }
+    doc.AddMember("mods", modsArray, allocator);
 
     std::error_code ec;
     std::filesystem::create_directories(_modsDir, ec);
@@ -218,23 +229,29 @@ void ModToggleManager::saveState() const {
         return;
     }
 
-    out << j.dump(2);
+    rapidjson::OStreamWrapper osw(out);
+    rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
+    doc.Accept(writer);
 }
 
 void ModToggleManager::writeHandshake() const {
     const auto handshakePath = _modsDir / kHandshakeFile;
 
-    nlohmann::json j;
-    j["handshake_version"] = 1;
-    j["restart_required"] = true;
-    j["mods"] = nlohmann::json::array();
-
+    rapidjson::Document doc;
+    doc.SetObject();
+    auto& allocator = doc.GetAllocator();
+    
+    doc.AddMember("handshake_version", 1, allocator);
+    doc.AddMember("restart_required", true, allocator);
+    
+    rapidjson::Value modsArray(rapidjson::kArrayType);
     for (const auto& mod : _mods) {
-        nlohmann::json item;
-        item["id"] = mod.id;
-        item["enabled"] = mod.enabled;
-        j["mods"].push_back(item);
+        rapidjson::Value item(rapidjson::kObjectType);
+        item.AddMember("id", rapidjson::Value(mod.id.c_str(), allocator), allocator);
+        item.AddMember("enabled", mod.enabled, allocator);
+        modsArray.PushBack(item, allocator);
     }
+    doc.AddMember("mods", modsArray, allocator);
 
     std::error_code ec;
     std::filesystem::create_directories(_modsDir, ec);
@@ -246,7 +263,10 @@ void ModToggleManager::writeHandshake() const {
         return;
     }
 
-    out << j.dump(2);
+    rapidjson::OStreamWrapper osw(out);
+    rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
+    doc.Accept(writer);
+    
     spdlog::debug("ModToggleManager: Wrote handshake to '{}' ({} mod entries)",
                 handshakePath.string().c_str(), _mods.size());
 }

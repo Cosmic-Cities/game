@@ -1,11 +1,13 @@
 #include "InputManager.h"
+#include "Inspector/Inspector.h"
 #include "ModToggleManager.h"
 #include "../dialog/DialogManager.h"
 #include "../dialog/DialogLayer.h"
-#include "../devtools/DevTools.h"
 
 #include <spdlog/spdlog.h>
 #include <fmt/format.h>
+
+#define INSPECTOR_ENABLED // disable to remove inspector :)
 
 void InputManager::initialize() {
     auto listener = ax::EventListenerKeyboard::create();
@@ -140,13 +142,23 @@ void InputManager::checkCombos(ax::EventKeyboard::KeyCode lastKey) {
             }
         }
     }
-
-    // F11: toggle devtools (primary keybind)
+#ifdef INSPECTOR_ENABLED
     if (lastKey == ax::EventKeyboard::KeyCode::KEY_F11) {
-        DevTools::toggle();
-        spdlog::debug("Devtools: {} (F11)", 
-                    DevTools::isOpen() ? "opened" : "closed");
+        auto inspector = ax::extension::Inspector::getInstance();
+        if (inspector) {
+            auto scene = ax::Director::getInstance()->getRunningScene();
+            if (scene) {
+                if (inspector->isVisible()) {
+                    inspector->close();
+                } else {
+                    inspector->openForScene(scene);
+                }
+                spdlog::debug("Inspector: {} (F11)", 
+                            inspector->isVisible() ? "opened" : "closed");
+            }
+        }
     }
+#endif
 }
 
 void InputManager::registerCombo(const std::vector<ax::EventKeyboard::KeyCode>& keys, const std::function<void()>& action, bool requireLastKeyMatch) {

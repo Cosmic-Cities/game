@@ -9,7 +9,7 @@ bool ProgressionLayer::init(bool progressing) {
     if (!Layer::init()) return false;
 
     auto winSize = Director::getInstance()->getWinSize();
-    auto lm = LocalisationManager::instance();
+    auto& lm = LocalisationManager::instance();
 
     auto bg = Starfield::create(480, 360, 120, 0.4f);
     if (bg) addChild(bg);

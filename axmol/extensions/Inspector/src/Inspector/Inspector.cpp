@@ -1,6 +1,7 @@
 #include "Inspector.h"
 #include "ImGuiPresenter.h"
 #include "axmol.h"
+#include "2d/DrawNode.h"
 
 #if __has_include(<cxxabi.h>)
 #    define AX_HAS_CXXABI 1
@@ -10,6 +11,10 @@
 #include "fmt/format.h"
 #include <memory>
 #include "misc/cpp/imgui_stdlib.h"
+
+// Forward declare LayoutMenu to avoid circular dependency
+class LayoutMenu;
+#include "../../../../Source/extras/LayoutMenu.h"
 
 NS_AX_EXT_BEGIN
 
@@ -146,6 +151,139 @@ void InspectorLabelProtocolPropertyHandler::drawProperties(Node* node)
     }
 }
 
+bool InspectorLayoutMenuPropertyHandler::isSupportedType(Node* node)
+{
+    return dynamic_cast<LayoutMenu*>(node) != nullptr;
+}
+
+void InspectorLayoutMenuPropertyHandler::drawProperties(Node* node)
+{
+    auto* layout = dynamic_cast<LayoutMenu*>(node);
+    if (!layout) return;
+
+    ImGui::SeparatorText("Layout Settings");
+
+    // Direction
+    const char* directionItems[] = {"Row", "Column"};
+    int currentDir = static_cast<int>(layout->getDirection());
+    if (ImGui::Combo("Direction", &currentDir, directionItems, 2))
+    {
+        layout->setDirection(static_cast<LayoutMenu::Direction>(currentDir));
+        layout->updateLayout();
+    }
+
+    // Order
+    const char* orderItems[] = {"Natural", "Name Asc", "Name Desc", "Tag Asc", "Tag Desc", "Z Asc", "Z Desc"};
+    int currentOrder = static_cast<int>(layout->getOrder());
+    if (ImGui::Combo("Order", &currentOrder, orderItems, 7))
+    {
+        layout->setOrder(static_cast<LayoutMenu::Order>(currentOrder));
+        layout->updateLayout();
+    }
+
+    // Gap
+    float gap = layout->getGap();
+    if (ImGui::DragFloat("Gap", &gap, 0.5f, 0.0f, 100.0f))
+    {
+        layout->setGap(gap);
+        layout->updateLayout();
+    }
+
+    // AlignMain
+    const char* alignMainItems[] = {"Start", "Center", "End", "Between", "Even"};
+    int currentAlignMain = static_cast<int>(layout->getAlignMain());
+    if (ImGui::Combo("Align Main", &currentAlignMain, alignMainItems, 5))
+    {
+        layout->setAlignMain(static_cast<LayoutMenu::AlignMain>(currentAlignMain));
+        layout->updateLayout();
+    }
+
+    // AlignCross
+    const char* alignCrossItems[] = {"Start", "Center", "End"};
+    int currentAlignCross = static_cast<int>(layout->getAlignCross());
+    if (ImGui::Combo("Align Cross", &currentAlignCross, alignCrossItems, 3))
+    {
+        layout->setAlignCross(static_cast<LayoutMenu::AlignCross>(currentAlignCross));
+        layout->updateLayout();
+    }
+
+    // Wrap
+    bool wrap = layout->getWrap();
+    if (ImGui::Checkbox("Wrap", &wrap))
+    {
+        layout->setWrap(wrap);
+        layout->updateLayout();
+    }
+
+    // ReverseMain
+    bool revMain = layout->getReverseMain();
+    if (ImGui::Checkbox("Reverse Main", &revMain))
+    {
+        layout->setReverseMain(revMain);
+        layout->updateLayout();
+    }
+
+    // ReverseCross
+    bool revCross = layout->getReverseCross();
+    if (ImGui::Checkbox("Reverse Cross", &revCross))
+    {
+        layout->setReverseCross(revCross);
+        layout->updateLayout();
+    }
+
+    // IgnoreInvisibleChildren
+    bool ignoreInvis = layout->getIgnoreInvisibleChildren();
+    if (ImGui::Checkbox("Ignore Invisible Children", &ignoreInvis))
+    {
+        layout->setIgnoreInvisibleChildren(ignoreInvis);
+        layout->updateLayout();
+    }
+
+    // GrowCrossAxis
+    bool growCross = layout->getGrowCrossAxis();
+    if (ImGui::Checkbox("Grow Cross Axis", &growCross))
+    {
+        layout->setGrowCrossAxis(growCross);
+        layout->updateLayout();
+    }
+
+    ImGui::Separator();
+
+    // AutoScale
+    bool autoScale = layout->getAutoScale();
+    if (ImGui::Checkbox("Auto Scale", &autoScale))
+    {
+        layout->setAutoScale(autoScale);
+        layout->updateLayout();
+    }
+
+    // AutoGrowAxis
+    auto autoGrow = layout->getAutoGrowAxis();
+    bool hasAutoGrow = autoGrow.has_value();
+    float autoGrowVal = hasAutoGrow ? *autoGrow : 0.0f;
+    
+    if (ImGui::Checkbox("Auto Grow Axis", &hasAutoGrow))
+    {
+        layout->setAutoGrowAxis(hasAutoGrow ? std::optional<float>(100.0f) : std::nullopt);
+        layout->updateLayout();
+    }
+    
+    if (hasAutoGrow)
+    {
+        ImGui::SameLine();
+        if (ImGui::DragFloat("##AutoGrowVal", &autoGrowVal, 1.0f, 0.0f, 1000.0f))
+        {
+            layout->setAutoGrowAxis(autoGrowVal);
+            layout->updateLayout();
+        }
+    }
+
+    if (ImGui::Button("Update Layout"))
+    {
+        layout->updateLayout();
+    }
+}
+
 Inspector* Inspector::getInstance()
 {
     if (g_instance == nullptr)
@@ -185,6 +323,12 @@ void Inspector::init()
     addPropertyHandler("__NODE__", std::make_unique<InspectorNodePropertyHandler>());
     addPropertyHandler("__SPRITE__", std::make_unique<InspectorSpritePropertyHandler>());
     addPropertyHandler("__LABEL_PROTOCOL__", std::make_unique<InspectorLabelProtocolPropertyHandler>());
+    addPropertyHandler("__LAYOUT_MENU__", std::make_unique<InspectorLayoutMenuPropertyHandler>());
+
+    // Default pages: Tree, Preview, Settings
+    addPage("tree", std::unique_ptr<Page>(nullptr));
+    addPage("preview", std::unique_ptr<Page>(nullptr));
+    addPage("settings", std::unique_ptr<Page>(nullptr));
 
     _beforeNewSceneEventListener = Director::getInstance()->getEventDispatcher()->addCustomEventListener(
         Director::EVENT_BEFORE_SET_NEXT_SCENE, [this](EventCustom*) {
@@ -249,6 +393,11 @@ std::string Inspector::getNodeTypeName(Node* node)
 
 void Inspector::drawTreeRecursive(Node* node, int index)
 {
+    if (!_showInvisible && !node->isVisible())
+    {
+        return;
+    }
+
     std::string str = fmt::format("[{}] {}", index, getNodeTypeName(node));
 
     if (node->getTag() != -1)
@@ -280,9 +429,19 @@ void Inspector::drawTreeRecursive(Node* node, int index)
 
     const bool is_open = ImGui::TreeNodeEx(node, flags, "%s", str.c_str());
 
+    // Track hovered node
+    if (ImGui::IsItemHovered())
+    {
+        _hovered_node = node;
+    }
+
     if (ImGui::IsItemClicked())
     {
-        if (node == _selected_node && ImGui::GetIO().KeyAlt)
+        if (_lockSelection)
+        {
+            // ignore selection changes when locked
+        }
+        else if (node == _selected_node && ImGui::GetIO().KeyAlt)
         {
             _selected_node = nullptr;
         }
@@ -301,7 +460,6 @@ void Inspector::drawTreeRecursive(Node* node, int index)
             {
                 continue;
             }
-
             drawTreeRecursive(child, i);
             i++;
         }
@@ -399,9 +557,18 @@ void Inspector::openForScene(Scene* target)
         return;
     }
 
+    // Create bounds visualization DrawNode
+    if (!_boundsDrawNode)
+    {
+        _boundsDrawNode = DrawNode::create();
+        _boundsDrawNode->setGlobalZOrder(10000); // Render on top
+    }
+    _target->addChild(_boundsDrawNode);
+
     auto* presenter = ImGuiPresenter::getInstance();
     presenter->addFont(FileUtils::getInstance()->fullPathForFilename(_fontPath), _fontSize);
     presenter->enableDPIScale();
+    applyTheme();
     presenter->addRenderLoop("#insp", AX_CALLBACK_0(Inspector::mainLoop , this), target);
 }
 
@@ -413,11 +580,24 @@ void Inspector::openForCurrentScene()
 void Inspector::close()
 {
     _selected_node = nullptr;
+    _hovered_node = nullptr;
+
+    if (_boundsDrawNode)
+    {
+        _boundsDrawNode->removeFromParent();
+        _boundsDrawNode = nullptr;
+    }
+
     _target = nullptr;
 
     auto presenter = ImGuiPresenter::getInstance();
     presenter->removeRenderLoop("#insp");
     presenter->clearFonts();
+}
+
+bool Inspector::isVisible() const
+{
+    return _target != nullptr;
 }
 
 bool Inspector::addPropertyHandler(std::string_view handlerId, std::unique_ptr<InspectPropertyHandler> handler)
@@ -453,24 +633,258 @@ void Inspector::mainLoop()
         return;
     }
 
+    // Reset hovered node at the start of each frame
+    _hovered_node = nullptr;
+
     if (ImGui::Begin("Inspector"))
     {
         const auto avail = ImGui::GetContentRegionAvail();
-        if (ImGui::BeginChild("node.explorer.tree", ImVec2(avail.x * 0.5f, 0), false, ImGuiWindowFlags_HorizontalScrollbar))
+        // Tabs (Tree, Preview, Settings)
+        if (ImGui::BeginTabBar("insp.tabs"))
         {
-            drawTreeRecursive(_target);
+            if (ImGui::BeginTabItem("Tree"))
+            {
+                _activeTab = 0;
+                drawTreePage();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Preview"))
+            {
+                _activeTab = 1;
+                drawPreviewPage();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Settings"))
+            {
+                _activeTab = 2;
+                drawSettingsPage();
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
         }
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        if (ImGui::BeginChild("node.explorer.options"))
-        {
-            drawProperties();
-        }
-        ImGui::EndChild();
     }
     ImGui::End();
+
+    // Update bounds visualization
+    updateBoundsVisualization();
+}
+bool Inspector::addPage(std::string_view id, std::unique_ptr<Page> page)
+{
+    // Allow nullptr pages for default built-ins handled by draw*Page
+    auto res = _pages.try_emplace(std::string(id), std::move(page));
+    return res.second;
+}
+
+void Inspector::removePage(const std::string& id)
+{
+    _pages.erase(id);
+}
+
+void Inspector::drawTreePage()
+{
+    const auto avail = ImGui::GetContentRegionAvail();
+    if (ImGui::BeginChild("insp.tree.left", ImVec2(avail.x * 0.5f, 0), false, ImGuiWindowFlags_HorizontalScrollbar))
+    {
+        drawTreeRecursive(_target);
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    if (ImGui::BeginChild("insp.tree.right"))
+    {
+        drawProperties();
+    }
+    ImGui::EndChild();
+}
+
+void Inspector::drawPreviewPage()
+{
+    if (!_selected_node)
+    {
+        ImGui::TextUnformatted("Select a node to preview.");
+        return;
+    }
+
+    // If the selected node is a Sprite, show its texture
+    if (auto* sprite = dynamic_cast<ax::Sprite*>(_selected_node.get()))
+    {
+        auto tex = sprite->getTexture();
+        std::string path = tex ? tex->getPath() : "<none>";
+        ImGui::Text("Texture: %s", path.c_str());
+        auto cs = sprite->getContentSize();
+        ImGui::Text("Size: %.0fx%.0f", cs.width, cs.height);
+
+        ImGui::Separator();
+        ImGui::Checkbox("Fit to window", &_previewFit);
+        ImGui::SameLine();
+        ImGui::SliderFloat("Zoom", &_previewZoom, 0.1f, 8.0f, "%.2fx");
+
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        ImVec2 drawSize = avail;
+        if (_previewFit && cs.x > 0 && cs.y > 0) {
+            float scale = std::min(avail.x / cs.width, avail.y / cs.height);
+            drawSize = ImVec2(cs.width * scale, cs.height * scale);
+        } else {
+            drawSize = ImVec2(cs.width * _previewZoom, cs.height * _previewZoom);
+        }
+
+        // Checkerboard background
+        ImVec2 p0 = ImGui::GetCursorScreenPos();
+        ImVec2 p1 = ImVec2(p0.x + drawSize.x, p0.y + drawSize.y);
+        auto* dl = ImGui::GetWindowDrawList();
+        const float tile = 10.0f;
+        for (float y = p0.y; y < p1.y; y += tile) {
+            for (float x = p0.x; x < p1.x; x += tile) {
+                bool dark = (static_cast<int>((x - p0.x) / tile) + static_cast<int>((y - p0.y) / tile)) % 2 == 0;
+                dl->AddRectFilled(ImVec2(x, y), ImVec2(std::min(x + tile, p1.x), std::min(y + tile, p1.y)),
+                    dark ? IM_COL32(180,180,180,255) : IM_COL32(220,220,220,255));
+            }
+        }
+
+        // Draw sprite via presenter at requested size
+        ImGui::SetCursorScreenPos(p0);
+        ImGuiPresenter::getInstance()->image(sprite, drawSize);
+    }
+    else
+    {
+        ImGui::Text("Type: %s", getNodeTypeName(_selected_node.get()).c_str());
+        auto cs = _selected_node->getContentSize();
+        ImGui::Text("Content Size: %.0fx%.0f", cs.width, cs.height);
+        ImGui::TextUnformatted("No specific preview available.");
+    }
+}
+
+void Inspector::drawSettingsPage()
+{
+    ImGui::TextUnformatted("Inspector Settings");
+    ImGui::Separator();
+
+    // Font settings
+    {
+        char fontPathBuf[260] = {};
+        std::strncpy(fontPathBuf, _fontPath.c_str(), sizeof(fontPathBuf) - 1);
+        if (ImGui::InputText("Font Path", fontPathBuf, sizeof(fontPathBuf)))
+        {
+            setFontPath(fontPathBuf);
+            rebuildFonts();
+        }
+    }
+    {
+        float fs = _fontSize;
+        if (ImGui::DragFloat("Font Size", &fs, 0.25f, 8.0f, 64.0f, "%.2f"))
+        {
+            setFontSize(fs);
+            rebuildFonts();
+        }
+    }
+
+    if (ImGui::Checkbox("Dark Theme", &_darkTheme))
+    {
+        applyTheme();
+    }
+
+    if (ImGui::DragFloat("DPI Scale", &_dpiScale, 0.05f, 0.5f, 3.0f, "%.2f"))
+    {
+        applyDPIScale();
+    }
+
+    // Auto add to scenes
+    bool autoAdd = _autoAddToScenes;
+    if (ImGui::Checkbox("Auto Add To Scenes", &autoAdd))
+    {
+        setAutoAddToScenes(autoAdd);
+    }
+
+    // Visibility / selection behaviour
+    ImGui::Checkbox("Show Invisible Nodes", &_showInvisible);
+    ImGui::Checkbox("Lock Selection", &_lockSelection);
+    ImGui::Checkbox("Show Bounds", &_showBounds);
+}
+
+void Inspector::applyTheme()
+{
+    if (!ImGui::GetCurrentContext()) return;
+    if (_darkTheme) ImGui::StyleColorsDark();
+    else ImGui::StyleColorsLight();
+}
+
+void Inspector::rebuildFonts()
+{
+    auto* presenter = ImGuiPresenter::getInstance();
+    presenter->clearFonts();
+    presenter->addFont(FileUtils::getInstance()->fullPathForFilename(_fontPath), _fontSize);
+}
+
+void Inspector::applyDPIScale()
+{
+    ImGuiPresenter::getInstance()->enableDPIScale(_dpiScale);
+}
+
+void Inspector::updateBoundsVisualization()
+{
+    if (!_boundsDrawNode || !_showBounds)
+    {
+        if (_boundsDrawNode)
+            _boundsDrawNode->clear();
+        return;
+    }
+
+    _boundsDrawNode->clear();
+
+    // Draw bounds for hovered node (lighter blue)
+    if (_hovered_node && _hovered_node != _selected_node)
+    {
+        auto worldBounds = _hovered_node->getBoundingBox();
+        auto parent = _hovered_node->getParent();
+        if (parent)
+        {
+            // Convert to world coordinates
+            Vec2 corners[4] = {
+                parent->convertToWorldSpace(Vec2(worldBounds.getMinX(), worldBounds.getMinY())),
+                parent->convertToWorldSpace(Vec2(worldBounds.getMaxX(), worldBounds.getMinY())),
+                parent->convertToWorldSpace(Vec2(worldBounds.getMaxX(), worldBounds.getMaxY())),
+                parent->convertToWorldSpace(Vec2(worldBounds.getMinX(), worldBounds.getMaxY()))
+            };
+
+            // Draw bounds rectangle
+            _boundsDrawNode->drawLine(corners[0], corners[1], Color4F(0.5f, 0.7f, 1.0f, 0.8f));
+            _boundsDrawNode->drawLine(corners[1], corners[2], Color4F(0.5f, 0.7f, 1.0f, 0.8f));
+            _boundsDrawNode->drawLine(corners[2], corners[3], Color4F(0.5f, 0.7f, 1.0f, 0.8f));
+            _boundsDrawNode->drawLine(corners[3], corners[0], Color4F(0.5f, 0.7f, 1.0f, 0.8f));
+
+            // Draw anchor point dot
+            auto anchorInWorld = _hovered_node->convertToWorldSpace(Vec2::ZERO);
+            _boundsDrawNode->drawSolidCircle(anchorInWorld, 4.0f, 0, 16, Color4F::WHITE);
+        }
+    }
+
+    // Draw bounds for selected node (darker blue, on top)
+    if (_selected_node)
+    {
+        auto worldBounds = _selected_node->getBoundingBox();
+        auto parent = _selected_node->getParent();
+        if (parent)
+        {
+            // Convert to world coordinates
+            Vec2 corners[4] = {
+                parent->convertToWorldSpace(Vec2(worldBounds.getMinX(), worldBounds.getMinY())),
+                parent->convertToWorldSpace(Vec2(worldBounds.getMaxX(), worldBounds.getMinY())),
+                parent->convertToWorldSpace(Vec2(worldBounds.getMaxX(), worldBounds.getMaxY())),
+                parent->convertToWorldSpace(Vec2(worldBounds.getMinX(), worldBounds.getMaxY()))
+            };
+
+            // Draw bounds rectangle with thicker lines
+            _boundsDrawNode->drawLine(corners[0], corners[1], Color4F(0.2f, 0.4f, 1.0f, 1.0f));
+            _boundsDrawNode->drawLine(corners[1], corners[2], Color4F(0.2f, 0.4f, 1.0f, 1.0f));
+            _boundsDrawNode->drawLine(corners[2], corners[3], Color4F(0.2f, 0.4f, 1.0f, 1.0f));
+            _boundsDrawNode->drawLine(corners[3], corners[0], Color4F(0.2f, 0.4f, 1.0f, 1.0f));
+
+            // Draw anchor point dot
+            auto anchorInWorld = _selected_node->convertToWorldSpace(Vec2::ZERO);
+            _boundsDrawNode->drawSolidCircle(anchorInWorld, 5.0f, 0, 16, Color4F::WHITE);
+        }
+    }
 }
 
 NS_AX_EXT_END
