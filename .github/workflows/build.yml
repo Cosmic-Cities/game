@@ -19,9 +19,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: choco install ninja llvm cmake -y
-      - name: Fetch axslcc and tooling (1kiss setup)
+      - name: Tool setup via cmdline (setupOnly)
         shell: powershell
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p win32 -setupOnly
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p win32 -setupOnly
       - name: Configure and build
         run: |
           mkdir build-windows
@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: axmol-windows-portable
-          path: build-windows/bin/Release
+          path: build-windows/bin
 
   # =========================
   # 2. Build Linux
@@ -47,8 +47,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang-20 cmake ninja-build build-essential libgtk-3-dev liblzma-dev zip
       - name: Ensure PowerShell is available
         run: sudo apt-get install -y powershell || true
-      - name: Fetch axslcc and tooling (1kiss setup)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p linux -setupOnly
+      - name: Tool setup via cmdline (setupOnly)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p linux -setupOnly
       - name: Configure and build
         run: |
           mkdir build-linux
@@ -76,6 +76,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: brew install ninja llvm@20 cmake zip ldid
+      - name: Install PowerShell
+        run: brew install powershell
+      - name: Tool setup via cmdline (setupOnly)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p osx -setupOnly
       - name: Configure and build
         run: |
           export PATH="/usr/local/opt/llvm@20/bin:$PATH"
@@ -83,10 +87,6 @@ jobs:
           cd build-macos
           cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           ninja
-      - name: Install PowerShell
-        run: brew install powershell
-      - name: Fetch axslcc and tooling (1kiss setup)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p osx -setupOnly
       - name: Package macOS app bundle
         run: |
           APP_DIR=build-macos/bin/Release/MyGame.app
@@ -114,8 +114,8 @@ jobs:
         run: brew install powershell
       - name: Set up Clang 20
         run: export PATH="/usr/local/opt/llvm@20/bin:$PATH"
-      - name: Fetch axslcc and tooling (1kiss setup)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p ios -setupOnly
+      - name: Tool setup via cmdline (setupOnly)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p ios -setupOnly
       - name: Configure CMake for iOS
         run: |
           mkdir -p build-ios
@@ -173,8 +173,8 @@ jobs:
         uses: android-actions/setup-android@v3
       - name: Ensure PowerShell is available
         run: sudo apt-get install -y powershell || true
-      - name: Fetch axslcc and tooling (1kiss setup)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p android -setupOnly
+      - name: Tool setup via cmdline (setupOnly)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p android -setupOnly
       - name: Install Ninja + CMake
         run: sudo apt-get install -y ninja-build cmake clang-20 zip
       - name: Build Android APK
