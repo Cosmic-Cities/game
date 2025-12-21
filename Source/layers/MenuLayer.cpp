@@ -3,6 +3,7 @@
 #include "ProgressionLayer.h"
 #include "audio/AudioEngine.h"
 #include <spdlog/spdlog.h>
+#include <ui/UIMediaPlayer.h>
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -209,7 +210,30 @@ void MenuLayer::onSettings(Object* sender) {
 }
 
 void MenuLayer::onCredits(Object* sender) {
-    spdlog::info("Credits button clicked");
+    if (auto existing = getChildByName("credits-video")) {
+        existing->removeFromParent();
+    }
+
+    auto media = ax::ui::MediaPlayer::create();
+    media->setName("credits-video");
+    media->setLooping(false);
+    media->setUserInputEnabled(false);
+
+    auto winSize = Director::getInstance()->getWinSize();
+    media->setContentSize(winSize);
+    media->setAnchorPoint({0.5f, 0.5f});
+    media->setPosition({winSize.width * 0.5f, winSize.height * 0.5f});
+
+    media->setFileName("cutscenes/CC_cutscene_001.mp4");
+    media->addEventListener([media](Object*, ax::ui::MediaPlayer::EventType evt) {
+        if (evt == ax::ui::MediaPlayer::EventType::COMPLETED) {
+            spdlog::info("Media finished playing");
+            media->removeFromParent();
+        }
+    });
+    media->play();
+
+    addChild(media, 1000);
 }
 
 void MenuLayer::onQuit(Object* sender) {

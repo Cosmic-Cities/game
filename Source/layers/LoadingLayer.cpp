@@ -1,7 +1,8 @@
 #include "LoadingLayer.h"
-#include "../layers/MenuLayer.h"
+#include "../layers/SavePickerLayer.h"
 #include "../utils/Starfield.h"
 #include "../managers/DiscordManager.h"
+#include "SavePickerLayer.h"
 #include <algorithm>
 
 using namespace ax;
@@ -233,6 +234,6 @@ void LoadingLayer::updateProgress() {
 
 void LoadingLayer::onFinishedLoading() {
     this->runAction(Sequence::create(DelayTime::create(0.1f), CallFunc::create([](){
-        Director::getInstance()->replaceScene(cosmiccities::MenuLayer::scene());
+        Director::getInstance()->replaceScene(cosmiccities::SavePickerLayer::scene());
     }), nullptr));
 }

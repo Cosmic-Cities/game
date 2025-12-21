@@ -1,71 +1,164 @@
-name: CI
+name: Build Axmol Game
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
-
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: RelWithDebInfo
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  win32:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  # =========================
+  # 1. Build Windows Portable
+  # =========================
+  build-windows-portable:
     runs-on: windows-latest
-    permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the changed files back to the repository.
-      contents: write
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: choco install ninja llvm cmake -y
+      - name: Configure and build
+        run: |
+          mkdir build-windows
+          cd build-windows
+          cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          ninja
+      - name: Upload Windows portable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: axmol-windows-portable
+          path: build-windows/bin/Release
 
-    - name: Build sources-migrate
-      shell: pwsh
-      run: |
-        git clone --depth=1 https://github.com/axmolengine/axmol "$HOME/axmol"
-        $scriptPath = "$HOME/axmol/build.ps1"
-        if (!(Test-Path $scriptPath)) { throw "Axmol build script not found: $scriptPath" }
-        powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath -d "$HOME/axmol" -xb '--config','Release','--target','sources-migrate'
-    - name: Migrate sources
-      run: |
-        git checkout main
-        . $HOME/axmol/build_x64/bin/Release/sources-migrate.exe "$(pwd)" --fuzzy
-        cp $HOME/axmol/build.ps1 ./build.ps1
-        git add ./build.ps1 -f
-      # Build your program with the given configuration
-    - uses: stefanzweifel/git-auto-commit-action@v4
-      with:
-        # Optional. Commit message for the created commit.
-        # Defaults to "Apply automatic changes"
-        commit_message: Migrate to compile with axmol latest
+  # =========================
+  # 2. Build Linux
+  # =========================
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang-20 cmake ninja-build build-essential libgtk-3-dev liblzma-dev zip ldid
+      - name: Configure and build
+        run: |
+          mkdir build-linux
+          cd build-linux
+          cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20
+          ninja
+      - name: Package Linux build
+        run: |
+          cd build-linux/bin/Release
+          zip -r ../../../../axmol-linux.zip *
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: axmol-linux
+          path: axmol-linux.zip
 
-        # Optional. Local and remote branch name where commit is going to be pushed
-        #  to. Defaults to the current branch.
-        #  You might need to set `create_branch: true` if the branch does not exist.
-        branch: migrate-to-axmol-latest
-        create_branch: true
-        push_options: '--force'
+  # =========================
+  # 3. Build macOS
+  # =========================
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install ninja llvm@20 cmake zip ldid
+      - name: Configure and build
+        run: |
+          export PATH="/usr/local/opt/llvm@20/bin:$PATH"
+          mkdir -p build-macos
+          cd build-macos
+          cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          ninja
+      - name: Package macOS app bundle
+        run: |
+          APP_DIR=build-macos/bin/Release/MyGame.app
+          if [ -d "$APP_DIR" ]; then
+            zip -r build-macos/axmol-macos.zip "$APP_DIR"
+          fi
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: axmol-macos
+          path: build-macos/axmol-macos.zip
 
-    - name: Install build dependencies (Ninja, LLVM)
-      run: |
-        choco install ninja -y
-        choco install llvm -y
+  # =========================
+  # 4. Build iOS (unsigned IPA)
+  # =========================
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install ninja llvm@20 cmake zip ldid
+      - name: Set up Clang 20
+        run: export PATH="/usr/local/opt/llvm@20/bin:$PATH"
+      - name: Configure CMake for iOS
+        run: |
+          mkdir -p build-ios
+          cd build-ios
+          cmake .. \
+            -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
+            -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM=""
+      - name: Build unsigned iOS app
+        run: xcodebuild -project MyGame.xcodeproj -configuration Release -scheme MyGame -sdk iphoneos
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r build-ios/Release-iphoneos/MyGame.app Payload/
+          zip -r build-ios/MyGame-unsigned.ipa Payload
+          rm -rf Payload
+      - name: Optional ldid signing
+        run: |
+          unzip build-ios/MyGame-unsigned.ipa -d build-ios/Payload
+          ldid -S build-ios/Payload/MyGame.app/MyGame
+          cd build-ios
+          zip -r MyGame-unsigned-ldid.ipa Payload
+          rm -rf Payload
+      - name: Upload IPA artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: build-ios/MyGame-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ldid-ipa
+          path: build-ios/MyGame-unsigned-ldid.ipa
 
-    - name: Configure CMake (Windows)
-      run: |
-        cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl
-
-    - name: Build (Windows RelWithDebInfo)
-      run: |
-        cmake --build build --config ${env:BUILD_TYPE}
-
-    - name: Upload Windows Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: CosmicCities-Windows-${{ env.BUILD_TYPE }}
-        path: build/bin/CosmicCities/
-        retention-days: 30
-
+  # =========================
+  # 5. Build Android
+  # =========================
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Ninja + CMake
+        run: sudo apt-get install -y ninja-build cmake clang-20 zip
+      - name: Build Android APK
+        run: |
+          mkdir -p build-android
+          cd build-android
+          cmake .. -G "Ninja" -DCMAKE_SYSTEM_NAME=Android -DANDROID_ABI=arm64-v8a -DCMAKE_BUILD_TYPE=Release
+          ninja
+          # Use Gradle wrapper to assemble APK
+          cd ../../
+          ./gradlew assembleRelease
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: app/build/outputs/apk/release/app-release.apk
