@@ -13,10 +13,15 @@ jobs:
   # =========================
   build-windows-portable:
     runs-on: windows-latest
+    env:
+      AX_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: choco install ninja llvm cmake -y
+      - name: Fetch axslcc and tooling (1kiss setup)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p win32 -setupOnly
       - name: Configure and build
         run: |
           mkdir build-windows
@@ -34,10 +39,16 @@ jobs:
   # =========================
   build-linux:
     runs-on: ubuntu-latest
+    env:
+      AX_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y clang-20 cmake ninja-build build-essential libgtk-3-dev liblzma-dev zip ldid
+        run: sudo apt-get update && sudo apt-get install -y clang-20 cmake ninja-build build-essential libgtk-3-dev liblzma-dev zip
+      - name: Ensure PowerShell is available
+        run: sudo apt-get install -y powershell || true
+      - name: Fetch axslcc and tooling (1kiss setup)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p linux -setupOnly
       - name: Configure and build
         run: |
           mkdir build-linux
@@ -59,6 +70,8 @@ jobs:
   # =========================
   build-macos:
     runs-on: macos-latest
+    env:
+      AX_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -70,6 +83,10 @@ jobs:
           cd build-macos
           cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           ninja
+      - name: Install PowerShell
+        run: brew install powershell
+      - name: Fetch axslcc and tooling (1kiss setup)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p osx -setupOnly
       - name: Package macOS app bundle
         run: |
           APP_DIR=build-macos/bin/Release/MyGame.app
@@ -87,12 +104,18 @@ jobs:
   # =========================
   build-ios:
     runs-on: macos-latest
+    env:
+      AX_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: brew install ninja llvm@20 cmake zip ldid
+      - name: Install PowerShell
+        run: brew install powershell
       - name: Set up Clang 20
         run: export PATH="/usr/local/opt/llvm@20/bin:$PATH"
+      - name: Fetch axslcc and tooling (1kiss setup)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p ios -setupOnly
       - name: Configure CMake for iOS
         run: |
           mkdir -p build-ios
@@ -137,6 +160,8 @@ jobs:
   # =========================
   build-android:
     runs-on: ubuntu-latest
+    env:
+      AX_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Java
@@ -146,6 +171,10 @@ jobs:
           java-version: '17'
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+      - name: Ensure PowerShell is available
+        run: sudo apt-get install -y powershell || true
+      - name: Fetch axslcc and tooling (1kiss setup)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/1k/1kiss.ps1 -p android -setupOnly
       - name: Install Ninja + CMake
         run: sudo apt-get install -y ninja-build cmake clang-20 zip
       - name: Build Android APK
