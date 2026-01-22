@@ -21,7 +21,7 @@ jobs:
         run: choco install ninja llvm cmake -y
       - name: Tool setup via cmdline (setupOnly)
         shell: powershell
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p win32 -setupOnly
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File $env:GITHUB_WORKSPACE\axmol\tools\cmdline\build.ps1 -p win32 -setupOnly
       - name: Configure and build
         run: |
           mkdir build-windows
@@ -48,7 +48,7 @@ jobs:
       - name: Ensure PowerShell is available
         run: sudo apt-get install -y powershell || true
       - name: Tool setup via cmdline (setupOnly)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p linux -setupOnly
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File "${{ github.workspace }}/axmol/tools/cmdline/build.ps1" -p linux -setupOnly
       - name: Configure and build
         run: |
           mkdir build-linux
@@ -79,7 +79,7 @@ jobs:
       - name: Install PowerShell
         run: brew install powershell
       - name: Tool setup via cmdline (setupOnly)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p osx -setupOnly
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File "${{ github.workspace }}/axmol/tools/cmdline/build.ps1" -p osx -setupOnly
       - name: Configure and build
         run: |
           export PATH="/usr/local/opt/llvm@20/bin:$PATH"
@@ -115,7 +115,7 @@ jobs:
       - name: Set up Clang 20
         run: export PATH="/usr/local/opt/llvm@20/bin:$PATH"
       - name: Tool setup via cmdline (setupOnly)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p ios -setupOnly
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File "${{ github.workspace }}/axmol/tools/cmdline/build.ps1" -p ios -setupOnly
       - name: Configure CMake for iOS
         run: |
           mkdir -p build-ios
@@ -174,7 +174,7 @@ jobs:
       - name: Ensure PowerShell is available
         run: sudo apt-get install -y powershell || true
       - name: Tool setup via cmdline (setupOnly)
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File axmol/tools/cmdline/build.ps1 -p android -setupOnly
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File "${{ github.workspace }}/axmol/tools/cmdline/build.ps1" -p android -setupOnly
       - name: Install Ninja + CMake
         run: sudo apt-get install -y ninja-build cmake clang-20 zip
       - name: Build Android APK
